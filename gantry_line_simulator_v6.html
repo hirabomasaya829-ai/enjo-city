@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f3f5f8">
+<title>搬送ラインシミュレーター</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#1f2937;--sub:#6b7280;--line:#e5e7eb;--primary:#2563eb;--red:#dc2626;--redbg:#fef2f2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1440px;margin:auto;padding:10px 12px 16px}
+.top{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.top h1{margin:0;font-size:16px}
+.top span{color:var(--sub);font-size:12px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:8px;align-items:start}
+.kpis,.summary{grid-column:1/-1}
+.main,.side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:7px 10px}
+.card-head h2{margin:0;font-size:13px}
+.tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kpi{padding:7px 10px}
+.kpi .k{font-size:11px;color:var(--sub)}
+.kpi .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi .v small{font-size:11px;font-weight:400;color:var(--sub);margin-left:2px}
+.kpi.main-kpi{border-color:#bfdbfe;background:#eff6ff}.kpi.main-kpi .v{color:#1d4ed8}
+.summary{margin:0;padding:6px 10px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:8px;font-size:12px}
+.summary b{color:var(--red)}
+.btn,select,input[type=number]{height:30px;border:1px solid #d1d5db;border-radius:6px;background:#fff;padding:0 9px}
+.btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
+.btn:hover{background:#f3f4f6}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:#1d4ed8}
+input[type=number]{width:100%;min-width:0;text-align:right;padding:0 6px}
+input:focus,select:focus{outline:2px solid #93c5fd;outline-offset:0;border-color:var(--primary)}
+.icon{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#mapBox{border-top:1px solid var(--line);outline:none}
+#mapBox:focus-visible{box-shadow:inset 0 0 0 2px var(--primary)}
+#lineCanvas,#motionCanvas{display:block;width:100%;height:auto}
+#lineCanvas{touch-action:pan-x pan-y;user-select:none;-webkit-user-select:none;cursor:grab}
+.legend{display:flex;flex-wrap:wrap;gap:3px 12px;padding:5px 10px;border-top:1px solid var(--line);color:var(--sub);font-size:11px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.legend i.thin{height:3px;vertical-align:2px}
+.legend .hint{margin-left:auto}
+.player{display:flex;align-items:center;gap:8px;padding:6px 10px}
+#togglePlay{min-width:84px;justify-content:center}
+.scrub{flex:1;min-width:60px;accent-color:var(--primary)}
+.time{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;color:var(--sub)}
+.time b{color:var(--ink)}
+#motionBox{border-top:1px solid var(--line)}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;padding:8px 10px}
+.settings label{display:block;font-size:11px;color:var(--sub);margin-bottom:2px}
+.stepper{display:grid;grid-template-columns:30px 1fr 30px;gap:4px}
+.stepper button{height:30px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:15px;padding:0}
+.stepper input{text-align:center}
+.check{grid-column:1/-1;display:flex!important;align-items:center;gap:6px;font-size:12px!important;color:var(--ink)!important;margin:0!important;cursor:pointer}
+.check input{width:15px;height:15px;accent-color:var(--primary);margin:0}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:11px;font-weight:600;color:var(--sub);text-align:center;padding:4px 3px;background:#f9fafb;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tbl td{padding:3px;border-bottom:1px solid #f1f2f4}
+.tbl tr:last-child td{border-bottom:0}
+.tbl input{height:27px}
+.tbl input.name{text-align:left}
+.tbl tr.bn td{background:var(--redbg)}
+.tbl tr.bn input.name{color:var(--red);font-weight:700}
+.tbl tr.sel td{box-shadow:inset 0 2px 0 #93c5fd,inset 0 -2px 0 #93c5fd}
+.about summary{padding:7px 10px;cursor:pointer;font-size:12px;color:var(--sub)}
+.about p{margin:0;padding:0 10px 8px;font-size:11px;color:var(--sub);line-height:1.6}
+.toast{position:fixed;left:50%;bottom:16px;transform:translate(-50%,10px);opacity:0;pointer-events:none;transition:.2s;background:#111827;color:#fff;padding:8px 14px;border-radius:6px;font-size:12px;max-width:calc(100vw - 24px);text-align:center;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:999px){
+ .layout{display:flex;flex-direction:column;align-items:stretch}
+ .main,.side{display:contents}
+ .kpis{order:1}.summary{order:2}.settings-card{order:3}.map-card{order:4}.player-card{order:5}.motion-card{order:6}.table-card{order:7}.about{order:8}
+}
+@media(max-width:600px){
+ .wrap{padding:8px 8px 12px}
+ .top span{display:none}
+ .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .kpi{padding:5px 8px}.kpi .v{font-size:16px}
+ .settings{grid-template-columns:1fr 1fr}
+ .btn .lbl{display:none}
+ .legend .hint{display:none}
+ .player{flex-wrap:wrap}
+ .scrub{order:5;flex-basis:100%}
+ .time{margin-left:auto}
+ input,select{font-size:16px!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header class="top"><h1>搬送ラインシミュレーター</h1><span>ガントリーローダー巡回モデル（単位：min）</span></header>
+ <main class="layout">
+  <section class="kpis" aria-live="polite">
+   <div class="card kpi main-kpi"><div class="k">ラインタクト</div><div class="v" id="cycleVal">—</div></div>
+   <div class="card kpi"><div class="k">生産能力</div><div class="v" id="capacityVal">—</div></div>
+   <div class="card kpi"><div class="k">ローダー占有率</div><div class="v" id="utilVal">—</div></div>
+   <div class="card kpi"><div class="k">ガントリー最短1周</div><div class="v" id="lapVal">—</div></div>
+  </section>
+  <p class="summary" id="analysisText"></p>
+
+  <div class="main">
+   <section class="card map-card">
+    <div class="card-head"><h2>レイアウト</h2>
+     <div class="tools">
+      <select id="layoutMode" aria-label="設備配置"><option value="line">一列配置</option><option value="enclosed">囲み配置</option></select>
+      <button id="resetLayout" class="btn" title="配置リセット"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span class="lbl">リセット</span></button>
+      <button id="copyImage" class="btn" title="配置図をコピー"><svg class="icon" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span class="lbl">コピー</span></button>
+      <button id="savePng" class="btn" title="PNG保存"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5"/><path d="M4 17v3h16v-3"/></svg><span class="lbl">PNG</span></button>
+     </div>
+    </div>
+    <div id="mapBox" tabindex="0" aria-label="配置図。フォーカス中にCtrl+Cで画像をコピー"><canvas id="lineCanvas" role="img" aria-label="ガントリーと加工機の配置図"></canvas></div>
+    <div class="legend"><span><i style="background:#3b82f6"></i>加工中</span><span><i style="background:#f59e0b"></i>入替・作業</span><span><i style="background:#94a3b8"></i>待機</span><span><i style="background:#dc2626"></i>制約設備</span><span class="hint">設備をドラッグで移動（0.5 mグリッド）</span></div>
+   </section>
+
+   <section class="card player-card player">
+    <button id="togglePlay" class="btn primary">▶ 再生</button>
+    <button id="resetPlay" class="btn" title="最初に戻す">↺</button>
+    <select id="playSpeed" aria-label="再生速度"><option value="1">×1</option><option value="5">×5</option><option value="10" selected>×10</option><option value="30">×30</option><option value="100">×100</option></select>
+    <input id="timeSlider" class="scrub" type="range" min="0" max="100" step="0.1" value="0" aria-label="シミュレーション時間">
+    <span class="time"><b id="currentTime">0.0</b> / <span id="endTime">0.0</span> min</span>
+   </section>
+
+   <section class="card motion-card">
+    <div class="card-head"><h2>タイムライン</h2></div>
+    <div id="motionBox"><canvas id="motionCanvas" aria-label="設備別稼働とガントリー位置のタイムライン"></canvas></div>
+    <div class="legend"><span><i style="background:#3b82f6"></i>加工</span><span><i style="background:#94a3b8"></i>入替</span><span><i style="background:#f59e0b"></i>加工前作業</span><span><i style="background:#a78bfa"></i>開始後作業</span><span><i class="thin" style="background:#ef4444"></i>ガントリー待ち</span><span><i class="thin" style="background:#111827"></i>ガントリー位置</span></div>
+   </section>
+  </div>
+
+  <aside class="side">
+   <section class="card settings-card settings">
+    <div><label for="stationCount">設備台数</label><div class="stepper"><button id="countDown" aria-label="減らす">−</button><input id="stationCount" type="number" min="1" max="12" step="1" value="5"><button id="countUp" aria-label="増やす">＋</button></div></div>
+    <div><label for="moveTime">隣接移動 (min)</label><input id="moveTime" type="number" min="0" max="60" step="0.1" value="0.1"></div>
+    <label class="check"><input id="extraBusy" type="checkbox" checked>加工前・開始後作業中はローダー停止</label>
+   </section>
+
+   <section class="card table-card">
+    <div class="card-head"><h2>設備パラメータ（min）</h2></div>
+    <table class="tbl"><thead><tr><th>設備</th><th>入替</th><th>加工前</th><th>開始後</th><th>加工</th></tr></thead><tbody id="machineRows"></tbody></table>
+   </section>
+
+   <details class="card about">
+    <summary>計算方法・前提条件</summary>
+    <p id="formulaText"></p>
+    <p>ガントリーは各設備を順に1回ずつ訪問し、最後から最初へ空走で戻ります。入替は2ハンド等で成立するものとし、1巡回で完成品1個を計上します。移動時間は配置図上の直線距離に比例する概算です。加減速・干渉・段取り・故障・バッファ制約などは含みません。構想比較用の目安としてご利用ください。</p>
+   </details>
+  </aside>
+ </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const config={count:5,move:6,swap:12,aux:6,post:6,process:180,auxBusy:true};
+const sampleProcess=[90,270,150,360,210,120,420,180,300,240,480,150];
+const GRID_PX=25,MAP_W=840,MAP_H=267,EXPORT_W=960,EXPORT_H=352;
+const COL={working:'#3b82f6',service:'#f59e0b',waiting:'#94a3b8',ink:'#1f2937',sub:'#6b7280',red:'#dc2626'};
+const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif';
+let layoutMode='line',customPositions=[],activeAlignment=null,selectedMachine=-1;
+let machines=[],schedule=null,stats=null,current=0,playing=false,lastFrame=0,raf=0,toastTimer=0,mapW=960,mapH=352;
+
+function cap(n,lo,hi){const v=Number(n);return Number.isFinite(v)?Math.min(hi,Math.max(lo,v)):lo}
+function fmt(n,d=1){return Number.isFinite(n)?(Math.round(n*10**d)/10**d).toLocaleString('ja-JP',{maximumFractionDigits:d}):'—'}
+function minNum(t){return (Math.round(Math.max(0,t||0)/6)/10).toFixed(1)}
+function minText(t){return minNum(t)+' min'}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))}
+function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000)}
+
+/* ---- layout model ---- */
+function defaultPosition(i){if(layoutMode==='enclosed'){const cols=Math.ceil(config.count/2);return i<cols?{x:.13+(i/Math.max(1,cols-1))*.74,y:.23}:{x:.13+((config.count-1-i)/Math.max(1,config.count-cols-1))*.74,y:.77}}return {x:.12+i/Math.max(1,config.count-1)*.76,y:.52}}
+function gridPosition(p){const x=Math.round(cap(p.x,.06,.94)*MAP_W/GRID_PX)*GRID_PX/MAP_W,y=Math.round(cap(p.y,.14,.88)*MAP_H/GRID_PX)*GRID_PX/MAP_H;return {x:cap(x,GRID_PX/MAP_W,1-GRID_PX/MAP_W),y:cap(y,GRID_PX/MAP_H,1-GRID_PX/MAP_H)}}
+function posAt(i){return customPositions[i]||gridPosition(defaultPosition(i))}
+function distance(a,b){const p=posAt(a),q=posAt(b);return Math.hypot((p.x-q.x)/.76,(p.y-q.y)/.54)}
+function moveDuration(a,b){return config.move*distance(a,b)}
+function resetLayout(mode){layoutMode=mode;customPositions=Array.from({length:config.count},(_,i)=>gridPosition(defaultPosition(i)));recalculate()}
+function syncMachines(){while(machines.length<config.count)machines.push({name:'MC'+String(machines.length+1).padStart(2,'0'),swap:config.swap,aux:config.aux,post:config.post,process:sampleProcess[machines.length]??config.process});machines.length=config.count;while(customPositions.length<config.count)customPositions.push(gridPosition(defaultPosition(customPositions.length)));customPositions.length=config.count}
+function alignedPosition(index,p){const s=gridPosition(p),th=GRID_PX*.48;let ax=null,ay=null;for(let i=0;i<config.count;i++){if(i===index)continue;const q=posAt(i);if(Math.abs((q.x-s.x)*MAP_W)<th)ax=s.x;if(Math.abs((q.y-s.y)*MAP_H)<th)ay=s.y}activeAlignment={x:ax,y:ay};return s}
+
+/* ---- calculation ---- */
+function getStats(){let move=0;for(let i=0;i<config.count-1;i++)move+=moveDuration(i,i+1);if(config.count>1)move+=moveDuration(config.count-1,0);const busy=machines.reduce((s,m)=>s+m.swap+(config.auxBusy?m.aux+m.post:0),0);const occupancy=move+busy;const limits=machines.map(m=>m.aux+m.swap+Math.max(m.process,m.post));const limit=Math.max(...limits);const cycle=Math.max(occupancy,limit);return {move,busy,occupancy,cycle,capacity:cycle>0?3600/cycle:null,util:cycle>0?100*occupancy/cycle:0,limit,idx:limits.indexOf(limit),limiter:occupancy>=limit?'gantry':'machine'}}
+function bnIndex(){return stats&&stats.limiter==='machine'?stats.idx:-1}
+function putSegment(list,type,start,end,from,to){if(end-start>1e-10)list.push({type,start,end,from,to})}
+function buildSchedule(){const segments=[],visits=Array.from({length:config.count},()=>[]),ready=Array(config.count).fill(0),lapEnds=[];let t=0;
+ for(let lap=0;lap<15;lap++){for(let i=0;i<config.count;i++){const m=machines[i];const start=t,auxEnd=start+m.aux;
+  if(config.auxBusy)putSegment(segments,'aux',start,auxEnd,i,i);t=config.auxBusy?auxEnd:start;
+  const w=Math.max(t,ready[i]);putSegment(segments,'wait',t,w,i,i);t=w;
+  const swapStart=t,swapEnd=t+m.swap,postEnd=swapEnd+m.post,processEnd=swapEnd+m.process;
+  putSegment(segments,'swap',swapStart,swapEnd,i,i);if(config.auxBusy)putSegment(segments,'post',swapEnd,postEnd,i,i);
+  t=config.auxBusy?postEnd:swapEnd;ready[i]=Math.max(processEnd,postEnd);visits[i].push({start,auxEnd,swapStart,swapEnd,postEnd,processEnd});
+  if(config.count>1){const to=i<config.count-1?i+1:0,end=t+moveDuration(i,to);putSegment(segments,'move',t,end,i,to);t=end}}
+  lapEnds.push(t)}
+ return {segments,visits,lapEnds,total:Math.max(t,.1)}}
+function visitAt(i,t){const arr=schedule.visits[i];for(let j=arr.length-1;j>=0;j--)if(t>=arr[j].start)return arr[j];return null}
+function machineState(i,t){const v=visitAt(i,t);if(!v||t>=v.processEnd)return {label:'待機',color:COL.waiting,progress:v?1:0,remaining:null};if(t<v.swapStart)return {label:t<v.auxEnd?'加工前作業':'加工完了待ち',color:COL.service,progress:0,remaining:null};if(t<v.swapEnd)return {label:'入替',color:COL.service,progress:0,remaining:null};const d=v.processEnd-v.swapEnd;return {label:'加工中',color:COL.working,progress:d>0?(t-v.swapEnd)/d:1,remaining:v.processEnd-t}}
+function segmentAt(t){const l=schedule.segments;let lo=0,hi=l.length-1;while(lo<=hi){const m=(lo+hi)>>1;if(l[m].end<=t)lo=m+1;else hi=m-1}return l[lo]||null}
+function loaderPos(t){const s=segmentAt(t);if(!s)return 0;if(s.type!=='move')return s.from;const f=(t-s.start)/Math.max(1e-9,s.end-s.start);return {a:s.from,b:s.to,f}}
+
+/* ---- UI ---- */
+function buildRows(){const tb=$('machineRows');tb.textContent='';machines.forEach((m,i)=>{const tr=document.createElement('tr'),td=document.createElement('td'),n=document.createElement('input');n.className='name';n.type='text';n.value=m.name;n.maxLength=12;n.setAttribute('aria-label',`設備${i+1}の名前`);n.style.cssText='height:27px;width:100%;min-width:52px;border:1px solid #d1d5db;border-radius:6px;padding:0 6px';n.addEventListener('input',()=>{m.name=n.value||('MC'+String(i+1).padStart(2,'0'));render()});td.append(n);tr.append(td);
+ for(const key of ['swap','aux','post','process']){const c=document.createElement('td'),inp=document.createElement('input');inp.type='number';inp.min='0';inp.max=key==='process'?'600':'60';inp.step='0.1';inp.value=(m[key]/60).toFixed(1);inp.setAttribute('aria-label',`${m.name} ${({swap:'入替',aux:'加工前',post:'開始後',process:'加工'})[key]}（min）`);inp.addEventListener('focus',()=>selectMachine(i));inp.addEventListener('change',()=>{const v=cap(inp.value,0,key==='process'?600:60);m[key]=Math.round(v*10)*6;inp.value=(m[key]/60).toFixed(1);recalculate()});c.append(inp);tr.append(c)}
+ tb.append(tr)});markRows()}
+function markRows(){const b=bnIndex();document.querySelectorAll('#machineRows tr').forEach((tr,i)=>{tr.classList.toggle('bn',i===b);tr.classList.toggle('sel',i===selectedMachine)})}
+function selectMachine(i){if(selectedMachine===i)return;selectedMachine=i;markRows();drawMap()}
+function recalculate(){syncMachines();stats=getStats();const r=stats;markRows();
+ $('cycleVal').innerHTML=minNum(r.cycle)+'<small>min/個</small>';$('capacityVal').innerHTML=(r.capacity===null?'—':fmt(r.capacity))+'<small>個/時</small>';$('utilVal').innerHTML=fmt(r.util)+'<small>%</small>';$('lapVal').innerHTML=minNum(r.occupancy)+'<small>min</small>';
+ let d;if(r.cycle===0)d='全入力が0.0 minのため算出できません。';else if(r.limiter==='gantry')d=`<b>制約：ガントリー</b>　1周 ${minText(r.occupancy)}（移動 ${minText(r.move)}＋占有作業 ${minText(r.busy)}）が設備サイクル最大 ${minText(r.limit)} を上回っています。`;else d=`<b>制約：${escapeHtml(machines[r.idx].name)}</b>　設備サイクル ${minText(r.limit)}（加工前＋入替＋MAX(加工, 開始後)）がガントリー1周 ${minText(r.occupancy)} を上回っています。`;
+ $('analysisText').innerHTML=d;
+ $('formulaText').textContent=`ラインタクト = MAX（ガントリー最短1周 ${minText(r.occupancy)}、各設備の 加工前＋入替＋MAX(加工, 開始後) の最大 ${minText(r.limit)}）。生産能力 = 60 ÷ ラインタクト(min)。`;
+ schedule=buildSchedule();current=0;playing=false;lastFrame=0;updateButton();$('timeSlider').max=schedule.total;$('endTime').textContent=minNum(schedule.total);render()}
+
+/* ---- map ---- */
+function geom(w,h){const k=Math.max(.55,Math.min(1,w/900)),px=Math.max(34,60*k),py=35;return {k,px,py,iw:w-2*px,ih:h-85}}
+function rr(ctx,x,y,w,h,r,fill,stroke,lw=1){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}
+function txt(ctx,s,x,y,size,color,weight='400',align='center'){ctx.font=`${weight} ${size}px ${FONT}`;ctx.fillStyle=color;ctx.textAlign=align;ctx.fillText(String(s),x,y)}
+function paintMap(ctx,w,h,print){const g=geom(w,h),k=g.k,pt=i=>({x:g.px+posAt(i).x*g.iw,y:g.py+posAt(i).y*g.ih});
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+ const sx=g.iw*GRID_PX/MAP_W,sy=g.ih*GRID_PX/MAP_H;ctx.strokeStyle='#eef1f5';ctx.lineWidth=1;ctx.beginPath();
+ for(let x=g.px%sx;x<=w;x+=sx){ctx.moveTo(Math.round(x)+.5,0);ctx.lineTo(Math.round(x)+.5,h)}for(let y=g.py%sy;y<=h;y+=sy){ctx.moveTo(0,Math.round(y)+.5);ctx.lineTo(w,Math.round(y)+.5)}ctx.stroke();
+ txt(ctx,'1マス = 0.5 m',w-8,14,10,COL.sub,'400','right');
+ if(activeAlignment&&!print){ctx.save();ctx.strokeStyle='#14b8a6';ctx.setLineDash([5,4]);ctx.lineWidth=1.2;ctx.beginPath();if(activeAlignment.x!==null){const x=g.px+activeAlignment.x*g.iw;ctx.moveTo(x,0);ctx.lineTo(x,h)}if(activeAlignment.y!==null){const y=g.py+activeAlignment.y*g.ih;ctx.moveTo(0,y);ctx.lineTo(w,y)}ctx.stroke();ctx.restore()}
+ if(config.count>1){ctx.strokeStyle='#cbd5e1';ctx.lineWidth=Math.max(3,6*k);ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();for(let i=0;i<config.count;i++){const p=pt(i);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.closePath();ctx.stroke()}
+ const bw=Math.max(52,100*k),bh=Math.max(46,60*k),b=bnIndex(),fs=Math.max(10,12*k),fs2=Math.max(9,10*k);
+ for(let i=0;i<config.count;i++){const p=pt(i),isB=i===b,st=print?{label:'',color:'#94a3b8',progress:0,remaining:null}:machineState(i,current);
+  rr(ctx,p.x-bw/2,p.y-bh/2,bw,bh,6,isB?'#fef2f2':'#fff',isB?COL.red:'#cbd5e1',isB?2:1);
+  rr(ctx,p.x-bw/2+3,p.y-bh/2+3,bw-6,4,2,st.color);
+  if(i===selectedMachine&&!print){ctx.save();ctx.setLineDash([4,3]);rr(ctx,p.x-bw/2-4,p.y-bh/2-4,bw+8,bh+8,8,null,COL.working,1.5);ctx.restore()}
+  txt(ctx,machines[i].name,p.x,p.y-bh/2+7+fs,fs,isB?COL.red:COL.ink,'700');
+  if(!print){const tw=bw-12;rr(ctx,p.x-tw/2,p.y+3,tw,4,2,'#e5e7eb');if(st.progress>0)rr(ctx,p.x-tw/2,p.y+3,tw*Math.min(1,st.progress),4,2,COL.working);
+   txt(ctx,st.remaining!==null?'残 '+minNum(st.remaining):st.label,p.x,p.y+bh/2-5,fs2,COL.sub)}}
+ let L=pt(0);if(!print){const s=segmentAt(current);if(s){const a=pt(s.from),c=pt(s.to),f=s.type==='move'?(current-s.start)/Math.max(1e-9,s.end-s.start):0;L={x:a.x+(c.x-a.x)*f,y:a.y+(c.y-a.y)*f}}}
+ const gw=Math.max(18,26*k),gh=Math.max(14,16*k),gy=L.y-bh/2-gh-4;rr(ctx,L.x-gw/2,gy,gw,gh,4,'#111827');txt(ctx,'G',L.x,gy+gh/2+Math.max(9,11*k)/2-1,Math.max(9,11*k),'#fff','700')}
+function drawMap(){if(!schedule)return;const box=$('mapBox'),cv=$('lineCanvas'),dpr=Math.min(window.devicePixelRatio||1,2);mapW=Math.max(300,Math.round(box.clientWidth||960));mapH=Math.round(Math.min(330,Math.max(200,mapW*.36)));cv.width=Math.round(mapW*dpr);cv.height=Math.round(mapH*dpr);const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);paintMap(ctx,mapW,mapH,false)}
+
+/* ---- timeline ---- */
+function drawTimeline(){if(!schedule)return;const cv=$('motionCanvas'),W=Math.max(300,$('motionBox').clientWidth||800),narrow=W<560,rowH=narrow?24:28,L=narrow?46:58,R=12,T=8,B=20,H=T+B+config.count*rowH,dpr=Math.min(window.devicePixelRatio||1,2);
+ cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
+ const pw=W-L-R,horizon=Math.max(1,Math.min(schedule.total,Math.max(360,stats.cycle*3))),X=t=>L+Math.max(0,Math.min(horizon,t))/horizon*pw,Y=pos=>T+rowH*(pos+.5),b=bnIndex();
+ c.fillStyle='#fff';c.fillRect(0,0,W,H);
+ for(let i=0;i<config.count;i++){c.fillStyle=i===b?'#fef2f2':i%2?'#fafbfc':'#fff';c.fillRect(L,T+i*rowH,pw,rowH);txt(c,machines[i].name,L-6,Y(i)+4,11,i===b?COL.red:COL.ink,i===b?'700':'400','right')}
+ const steps=[.5,1,2,5,10,20,30,60,120],hm=horizon/60,step=steps.find(s=>hm/s<=pw/60)||120;c.strokeStyle='#e5e7eb';c.lineWidth=1;c.beginPath();
+ for(let m=0;m<=hm+1e-6;m+=step){const x=Math.round(X(m*60))+.5;c.moveTo(x,T);c.lineTo(x,H-B);txt(c,(step<1?m.toFixed(1):m),x,H-6,10,COL.sub)}c.stroke();
+ const bars=[['swapStart','swapEnd','#94a3b8',0],['swapEnd','processEnd','#3b82f6',0],['start','auxEnd','#f59e0b',1],['swapEnd','postEnd','#a78bfa',1]],bh=rowH*.3;
+ for(let i=0;i<config.count;i++){const y=Y(i);for(const v of schedule.visits[i]){if(v.start>=horizon)break;for(const [a,z,col,sub] of bars){const t0=v[a],t1=Math.min(horizon,v[z]);if(!(t1>t0))continue;c.fillStyle=col;if(sub)c.fillRect(X(t0),y+bh*.5+1,Math.max(1,X(t1)-X(t0)),3);else c.fillRect(X(t0),y-bh*.7,Math.max(1,X(t1)-X(t0)),bh)}}}
+ c.fillStyle='#ef4444';for(const s of schedule.segments){if(s.type!=='wait'||s.start>=horizon)continue;c.fillRect(X(s.start),Y(s.from)+bh*.5+5,Math.max(1,X(Math.min(horizon,s.end))-X(s.start)),2)}
+ c.strokeStyle='#111827';c.lineWidth=1.2;c.beginPath();let first=true;for(const s of schedule.segments){if(s.start>=horizon)break;const e=Math.min(s.end,horizon),y1=Y(s.from),y2=s.type==='move'?Y(s.from+(s.to-s.from)*(e-s.start)/(s.end-s.start)):y1;if(first){c.moveTo(X(s.start),y1);first=false}else c.lineTo(X(s.start),y1);c.lineTo(X(e),y2)}c.stroke();
+ if(current<=horizon){const x=Math.round(X(current))+.5;c.strokeStyle=COL.red;c.lineWidth=1.5;c.beginPath();c.moveTo(x,T);c.lineTo(x,H-B);c.stroke();const lp=loaderPos(current),py=typeof lp==='number'?Y(lp):Y(lp.a+(lp.b-lp.a)*lp.f);c.fillStyle=COL.red;c.beginPath();c.arc(x,py,3.5,0,Math.PI*2);c.fill()}}
+
+function render(){if(!schedule)return;drawMap();drawTimeline();$('currentTime').textContent=minNum(current);$('timeSlider').value=current}
+function updateButton(){$('togglePlay').textContent=playing?'❚❚ 停止':'▶ 再生'}
+function tick(ts){if(!playing){lastFrame=0;return}if(!lastFrame)lastFrame=ts;const dt=Math.min((ts-lastFrame)/1000,.25);lastFrame=ts;current+=dt*(Number($('playSpeed').value)||10);if(current>=schedule.total){current=schedule.total;playing=false;lastFrame=0;updateButton()}render();if(playing)raf=requestAnimationFrame(tick)}
+function setPlaying(v){playing=v;if(v&&current>=schedule.total)current=0;lastFrame=0;updateButton();if(v){cancelAnimationFrame(raf);raf=requestAnimationFrame(tick)}}
+
+/* ---- export ---- */
+function exportCanvas(scale){const c=document.createElement('canvas');c.width=EXPORT_W*scale;c.height=EXPORT_H*scale;const ctx=c.getContext('2d');ctx.setTransform(scale,0,0,scale,0,0);paintMap(ctx,EXPORT_W,EXPORT_H,true);return c}
+function toBlob(cv){return new Promise((ok,ng)=>cv.toBlob(b=>b?ok(b):ng(new Error('PNG変換に失敗しました')),'image/png'))}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+const FILE='gantry_layout_上面図.png';
+async function copyImage(){try{const blob=await toBlob(exportCanvas(2));if(navigator.clipboard&&navigator.clipboard.write&&typeof ClipboardItem!=='undefined'){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);showToast('配置図をコピーしました（Ctrl+Vで貼り付け）');return}catch(e){console.warn(e)}}download(blob,FILE);showToast('画像コピー非対応のためPNGを保存しました')}catch(e){console.error(e);showToast('画像の出力に失敗しました')}}
+async function savePng(){try{download(await toBlob(exportCanvas(3)),FILE);showToast('PNGを保存しました')}catch(e){console.error(e);showToast('画像の保存に失敗しました')}}
+
+/* ---- events ---- */
+function setCount(n){config.count=Math.round(cap(n,1,12));$('stationCount').value=config.count;syncMachines();if(selectedMachine>=config.count)selectedMachine=-1;buildRows();recalculate()}
+function init(){syncMachines();stats=getStats();buildRows();
+ $('stationCount').addEventListener('change',e=>setCount(e.target.value));
+ $('stationCount').addEventListener('input',e=>{const v=Number(e.target.value);if(Number.isInteger(v)&&v>=1&&v<=12)setCount(v)});
+ $('countDown').addEventListener('click',()=>setCount(config.count-1));$('countUp').addEventListener('click',()=>setCount(config.count+1));
+ $('moveTime').addEventListener('change',e=>{config.move=Math.round(cap(e.target.value,0,60)*10)*6;e.target.value=(config.move/60).toFixed(1);recalculate()});
+ $('extraBusy').addEventListener('change',e=>{config.auxBusy=e.target.checked;recalculate()});
+ $('layoutMode').addEventListener('change',e=>resetLayout(e.target.value));$('resetLayout').addEventListener('click',()=>resetLayout(layoutMode));
+ $('copyImage').addEventListener('click',copyImage);$('savePng').addEventListener('click',savePng);
+ $('togglePlay').addEventListener('click',()=>setPlaying(!playing));$('resetPlay').addEventListener('click',()=>{setPlaying(false);current=0;render()});
+ $('timeSlider').addEventListener('input',e=>{current=cap(e.target.value,0,schedule.total);lastFrame=0;render()});
+ $('mapBox').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'&&!window.getSelection().toString()){e.preventDefault();copyImage()}});
+ const cv=$('lineCanvas');let drag=-1;
+ const toNorm=(cx,cy)=>{const r=cv.getBoundingClientRect(),g=geom(mapW,mapH);return {x:((cx-r.left)/r.width*mapW-g.px)/g.iw,y:((cy-r.top)/r.height*mapH-g.py)/g.ih}};
+ const hit=p=>{const g=geom(mapW,mapH);let best=Infinity,h=-1;for(let i=0;i<config.count;i++){const q=posAt(i),d=Math.hypot((q.x-p.x)*g.iw,(q.y-p.y)*g.ih);if(d<best&&d<55*g.k){best=d;h=i}}return h};
+ const moveTo=(i,p)=>{customPositions[i]=alignedPosition(i,p);recalculate()};
+ const end=()=>{if(drag>=0){drag=-1;activeAlignment=null;cv.style.cursor='grab';drawMap()}};
+ cv.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;const h=hit(toNorm(e.clientX,e.clientY));selectMachine(h);if(h>=0){drag=h;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing'}});
+ cv.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'&&drag>=0)moveTo(drag,toNorm(e.clientX,e.clientY))});
+ cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+ cv.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0],h=hit(toNorm(t.clientX,t.clientY));selectMachine(h);if(h>=0){drag=h;e.preventDefault()}},{passive:false});
+ cv.addEventListener('touchmove',e=>{if(drag<0||e.touches.length!==1)return;e.preventDefault();const t=e.touches[0];moveTo(drag,toNorm(t.clientX,t.clientY))},{passive:false});
+ cv.addEventListener('touchend',end);cv.addEventListener('touchcancel',end);
+ let rt=0;const ro=new ResizeObserver(()=>{cancelAnimationFrame(rt);rt=requestAnimationFrame(render)});ro.observe($('mapBox'));ro.observe($('motionBox'));
+ recalculate()}
+init();
+})();
+</script>
+</body>
+</html>
