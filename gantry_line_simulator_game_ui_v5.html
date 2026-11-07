@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0d26">
+<title>BLOCK FACTORY — 搬送ラインシミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ===== BLOCK FACTORY · arcade / RPG game UI ===== */
+:root{
+ --bg:#0b0d26;--bg2:#141846;--win:#161a48;--win2:#1e2360;--win3:#262c74;
+ --frame:#f3eedc;--dark:#04051a;--ink:#f3eedc;--sub:#a7aedf;--dim:#6d74b0;
+ --gold:#ffcc33;--gold2:#ff9f1c;--golddk:#9a5a0c;--cyan:#4fe3ff;--green:#5df28e;--greendk:#1b7a45;
+ --red:#ff4d6d;--purple:#b98cff;--orange:#ffb347;
+ --jp:"DotGothic16","MS Gothic","Osaka-Mono",monospace;--px:"Press Start 2P","DotGothic16",monospace;
+}
+*{box-sizing:border-box;border-radius:0}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--ink);font:14px/1.5 var(--jp);letter-spacing:.3px;
+ background:
+  radial-gradient(1px 1px at 12% 18%,#fff8 50%,transparent 51%),
+  radial-gradient(1px 1px at 72% 8%,#fff6 50%,transparent 51%),
+  radial-gradient(2px 2px at 88% 42%,#ffd76655 50%,transparent 51%),
+  radial-gradient(1px 1px at 33% 66%,#fff5 50%,transparent 51%),
+  radial-gradient(1px 1px at 57% 88%,#fff4 50%,transparent 51%),
+  linear-gradient(#1a1f5a33 2px,transparent 2px) 0 0/32px 32px,
+  linear-gradient(90deg,#1a1f5a33 2px,transparent 2px) 0 0/32px 32px,
+  radial-gradient(ellipse at 50% -10%,#2a2f7a 0,var(--bg) 60%) fixed}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;
+ background:repeating-linear-gradient(0deg,#0000 0 2px,#00000022 2px 3px);mix-blend-mode:multiply}
+button,input,select,summary,table{font-family:var(--jp);font-size:inherit;color:inherit}
+button{cursor:pointer}
+.shell{max-width:1560px;margin:auto;padding:12px 14px 28px}
+
+/* --- RPG window frame --- */
+.win{position:relative;background:linear-gradient(180deg,var(--win2),var(--win) 60%);border:3px solid var(--frame);
+ box-shadow:0 0 0 3px var(--dark),6px 6px 0 3px #00000088,inset 0 0 0 3px var(--win3);color:var(--ink)}
+.win-tab{position:absolute;top:-14px;left:12px;z-index:2;display:inline-flex;align-items:center;gap:6px;background:var(--gold);color:#2a1a00;
+ font:10px/1 var(--px);padding:6px 9px 5px;border:3px solid var(--dark);box-shadow:inset -3px -3px 0 var(--gold2),inset 3px 3px 0 #fff2a8;letter-spacing:.5px;white-space:nowrap}
+.win-tab.cyan{background:var(--cyan);box-shadow:inset -3px -3px 0 #1a9fbf,inset 3px 3px 0 #d4f8ff;color:#00222c}
+.win-tab.green{background:var(--green);box-shadow:inset -3px -3px 0 #22a85a,inset 3px 3px 0 #d6ffe4;color:#002611}
+.win-tab.red{background:var(--red);box-shadow:inset -3px -3px 0 #b0213f,inset 3px 3px 0 #ffd0da;color:#fff}
+.win-body{padding:20px 14px 14px}
+
+/* --- top HUD --- */
+.hud{display:flex;align-items:stretch;justify-content:space-between;gap:14px;padding:10px 14px;margin:6px 0 26px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:46px;height:46px;flex:none;display:grid;place-items:center;background:var(--gold);border:3px solid var(--dark);
+ box-shadow:inset -4px -4px 0 var(--gold2),inset 4px 4px 0 #fff2a8;font:20px/1 var(--px);color:#3a2200;animation:bob 1.6s steps(2) infinite}
+@keyframes bob{50%{transform:translateY(-3px)}}
+.title h1{margin:0;font:18px/1.2 var(--px);color:var(--gold);text-shadow:3px 3px 0 var(--golddk),6px 6px 0 var(--dark);letter-spacing:1px;white-space:nowrap}
+.title p{margin:6px 0 0;color:var(--sub);font-size:12px}
+.title p b{color:var(--cyan);font-weight:400}
+.hud-stats{display:flex;gap:8px;align-items:stretch}
+.hud-stat{min-width:104px;background:var(--dark);border:3px solid var(--win3);padding:6px 10px;display:flex;flex-direction:column;justify-content:center;position:relative}
+.hud-stat .k{font:8px/1 var(--px);color:var(--dim);letter-spacing:1px}
+.hud-stat .v{font:18px/1.2 var(--px);color:var(--ink);margin-top:6px;white-space:nowrap}
+.hud-stat.score .v{color:var(--green);text-shadow:0 0 8px #5df28e88}
+.hud-stat.time .v{color:var(--cyan);font-size:13px}
+.hud-stat.rank .v{color:var(--gold);text-shadow:0 0 10px #ffcc3388}
+.hud-stat.bump .v{animation:bump .5s steps(4)}
+@keyframes bump{0%{transform:scale(1.5)}100%{transform:none}}
+.plus{position:absolute;right:8px;top:2px;font:12px/1 var(--px);color:var(--green);pointer-events:none;animation:floatup 1s steps(8) forwards;text-shadow:2px 2px 0 var(--dark)}
+@keyframes floatup{to{transform:translateY(-26px);opacity:0}}
+.live{align-self:center;font:9px/1 var(--px);color:var(--dim);padding:7px 8px;border:3px solid var(--win3);background:var(--dark);white-space:nowrap}
+.live::before{content:"■ ";color:var(--dim)}
+body.is-playing .live{color:var(--red);border-color:var(--red)}
+body.is-playing .live::before{color:var(--red);animation:blink .6s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* --- layout --- */
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:30px 22px;align-items:start}
+.content,.sidebar{display:flex;flex-direction:column;gap:30px;min-width:0}
+
+/* --- stat tiles --- */
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.metric{display:flex;gap:10px;align-items:center;padding:12px 12px 12px 10px}
+.metric .ico{width:38px;height:38px;flex:none;display:grid;place-items:center;font:14px/1 var(--px);background:var(--dark);border:3px solid var(--win3);color:var(--cyan)}
+.metric .small{font-size:12px;color:var(--sub);line-height:1.2}
+.metric .val{font:16px/1.3 var(--px);color:var(--ink);margin-top:5px;white-space:nowrap;letter-spacing:-.5px}
+.metric .val small{font:12px var(--jp);color:var(--sub);margin-left:4px;letter-spacing:0}
+.metric .m-body{min-width:0;flex:1}
+.metric.primary{background:linear-gradient(180deg,#5a3a0e,#3d2508);border-color:var(--gold)}
+.metric.primary .ico{color:var(--gold);border-color:var(--golddk)}
+.metric.primary .val{color:var(--gold);text-shadow:2px 2px 0 var(--dark)}
+.gauge{height:8px;margin-top:6px;background:var(--dark);border:2px solid var(--win3);position:relative;overflow:hidden}
+.gauge i{position:absolute;inset:0 auto 0 0;width:0;background:var(--cyan);transition:width .3s steps(6)}
+.gauge::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#0000 0 6px,var(--dark) 6px 8px)}
+
+/* --- game screen (factory map) --- */
+.screen-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:20px 14px 10px}
+.screen-head h2{margin:0;font-size:16px;font-weight:400;color:var(--frame)}
+.screen-head h2 small{color:var(--sub);font-size:11px;margin-left:8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.monitor{margin:0 12px;border:4px solid var(--dark);background:#000;position:relative;box-shadow:inset 0 0 0 3px #3a3f86}
+.monitor::after{content:"";position:absolute;inset:0;pointer-events:none;
+ background:repeating-linear-gradient(0deg,#0000 0 2px,#0000001f 2px 4px),radial-gradient(ellipse at center,#0000 60%,#00000066 100%)}
+.screen-bar{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;background:var(--dark);font:9px/1.4 var(--px);color:var(--green);letter-spacing:.5px}
+.screen-bar span:last-child{color:var(--dim)}
+.drawing-scroll{overflow-x:auto;outline:none;touch-action:pan-x pan-y}
+.drawing-scroll:focus-visible{box-shadow:inset 0 0 0 3px var(--gold)}
+#lineCanvas{display:block;width:100%!important;height:auto!important;image-rendering:pixelated;user-select:none;-webkit-user-select:none}
+.hotbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 12px 4px}
+.build-tool{position:relative;min-width:88px;height:44px;padding:6px 12px 6px 22px;background:#2a2f7a;border:3px solid var(--dark);color:var(--ink);
+ box-shadow:inset -3px -3px 0 #191d55,inset 3px 3px 0 #4a52b0;font-size:13px}
+.build-tool kbd{position:absolute;top:4px;left:5px;font:8px/1 var(--px);color:var(--dim)}
+.build-tool:hover{background:#353b92}
+.build-tool.active{background:var(--gold);color:#2a1a00;box-shadow:inset -3px -3px 0 var(--gold2),inset 3px 3px 0 #fff2a8,0 0 0 3px var(--frame)}
+.build-tool.active kbd{color:#6a4300}
+#buildHint{margin-left:6px;color:var(--sub);font-size:12px}
+#buildHint::before{content:"▶ ";color:var(--gold);animation:blink 1s steps(1) infinite}
+.machine-inspector{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 12px 0;padding:10px 12px;background:var(--dark);border:3px solid var(--gold);font-size:12px}
+.machine-inspector[hidden]{display:none}
+.machine-inspector strong{font:12px var(--px);color:var(--gold)}
+.machine-inspector label{display:flex;align-items:center;gap:5px;color:var(--sub)}
+.machine-inspector input{width:66px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px 14px;font-size:12px;color:var(--sub)}
+.legend span{display:inline-flex;align-items:center}
+.dot{width:10px;height:10px;display:inline-block;margin-right:6px;border:2px solid var(--dark)}
+.bottleneck-summary{color:var(--red)!important;font-size:12px}
+
+/* --- buttons & inputs --- */
+.btn,.stepper button,.machine-inspector button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:6px 12px;
+ background:#2a2f7a;color:var(--ink);border:3px solid var(--dark);box-shadow:inset -3px -3px 0 #191d55,inset 3px 3px 0 #4a52b0,3px 3px 0 var(--dark);font-size:13px;white-space:nowrap}
+.btn:hover,.stepper button:hover,.machine-inspector button:hover{background:#353b92}
+.btn:active,.stepper button:active,.build-tool:active,.machine-inspector button:active{transform:translate(3px,3px);box-shadow:inset 3px 3px 0 #191d55}
+.btn.primary{background:var(--gold);color:#2a1a00;box-shadow:inset -3px -3px 0 var(--gold2),inset 3px 3px 0 #fff2a8,3px 3px 0 var(--dark)}
+.btn.primary:hover{background:#ffd95c}
+.btn.danger{background:#7a1f3a;box-shadow:inset -3px -3px 0 #4a0f22,inset 3px 3px 0 #b84466,3px 3px 0 var(--dark)}
+.icon{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square}
+input[type=number],input[type=text],.tbl input,select,.speed-select{height:34px;background:var(--dark);color:var(--ink);border:3px solid #3a3f86;padding:3px 8px;outline:none;font-size:13px}
+input:focus,select:focus{border-color:var(--gold)}
+button:focus-visible,summary:focus-visible,input[type=range]:focus-visible{outline:3px dashed var(--gold);outline-offset:3px}
+input[type=checkbox]{appearance:none;width:20px;height:20px;flex:none;margin:0;background:var(--dark);border:3px solid var(--frame);cursor:pointer;display:grid;place-items:center}
+input[type=checkbox]:checked{background:var(--green)}
+input[type=checkbox]:checked::after{content:"";width:6px;height:6px;background:var(--dark)}
+select{cursor:pointer}
+
+/* --- controller (transport) --- */
+.transport .win-body{padding-top:22px}
+.transport-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.transport-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#togglePlay{min-width:130px;min-height:46px;font-size:15px}
+body.is-playing #togglePlay{background:var(--red);color:#fff;box-shadow:inset -3px -3px 0 #b0213f,inset 3px 3px 0 #ffb3c2,3px 3px 0 var(--dark)}
+.help{color:var(--sub);font-size:12px;margin-left:6px}
+.elapsed{font:20px/1 var(--px);color:var(--cyan);background:var(--dark);border:3px solid #3a3f86;padding:10px 12px;text-shadow:0 0 8px #4fe3ff88;font-variant-numeric:tabular-nums}
+.scrub{-webkit-appearance:none;appearance:none;width:100%;height:16px;margin:16px 0 6px;background:var(--dark);border:3px solid #3a3f86;cursor:pointer}
+.scrub::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:22px;background:var(--gold);border:3px solid var(--dark);box-shadow:inset -3px -3px 0 var(--gold2)}
+.scrub::-moz-range-thumb{width:14px;height:18px;background:var(--gold);border:3px solid var(--dark);border-radius:0}
+.scrub::-moz-range-progress{background:var(--cyan);height:10px}
+.transport-note{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--dim)}
+.kbd-hint{color:var(--dim);font-size:11px}
+.kbd-hint kbd{font:8px var(--px);color:var(--ink);background:var(--win3);border:2px solid var(--dark);padding:2px 4px}
+
+/* --- timeline --- */
+.motion-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:20px 14px 8px}
+.motion-head .cap{color:var(--sub);font-size:12px}
+.motion-legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 14px 10px;font-size:12px;color:var(--sub)}
+.motion-legend span{display:inline-flex;align-items:center;gap:6px}
+.motion-legend i{display:inline-block;width:16px;height:8px;border:1px solid var(--dark)}
+.legend-process{background:#4ac990}.legend-aux{background:#f3b34c}.legend-swap{background:#a9b7c7}.legend-loader{background:#5be8f3;height:4px!important}
+.legend-idle{background:repeating-linear-gradient(90deg,#ff6671 0 6px,#8f2631 6px 10px);height:6px!important}
+.motion-scroll{overflow-x:auto;margin:0 12px 12px;border:4px solid var(--dark)}
+#motionCanvas{display:block;max-width:none;image-rendering:pixelated}
+
+/* --- setup / params --- */
+.settings-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label,.label-line label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px}
+.stepper{display:grid;grid-template-columns:36px 1fr 36px;gap:6px}
+.stepper button{padding:0;font-size:18px;min-height:34px}
+.inputrow{display:flex;gap:4px;align-items:center}
+.inputrow input{width:100%;text-align:center}
+.suffix{color:var(--sub);font-size:12px}
+.option-field{grid-column:1/-1}
+.checkline{display:flex;align-items:center;gap:10px;font-size:12px;cursor:pointer;color:var(--ink)}
+.details summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:20px 14px 8px;font-size:13px;color:var(--frame)}
+.details summary::-webkit-details-marker{display:none}
+.details summary::after{content:"▼";font-size:10px;color:var(--gold)}
+.details:not([open]) summary::after{content:"▶"}
+.details-helper{margin:0 14px 8px;font-size:11px;color:var(--dim)}
+.table-wrap{overflow-x:auto;padding:0 10px 12px}
+.tbl{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:12px;text-align:center}
+.tbl th{font-size:11px;font-weight:400;color:var(--gold);padding:2px 3px;line-height:1.25}
+.tbl td{padding:0 2px;background:#0c0f33}
+.tbl td:first-child{border-left:3px solid #3a3f86}
+.tbl input{width:100%;height:30px;padding:2px 4px;text-align:center;border-width:2px}
+.tbl input.name-field{text-align:left;min-width:62px}
+.bottleneck-machine td{background:#3a0f22!important}
+.bottleneck-machine td:first-child{border-left-color:var(--red)!important}
+.bottleneck-machine input{border-color:var(--red)!important}
+
+/* --- party status --- */
+.status-grid{display:flex;flex-direction:column;gap:8px;padding:20px 12px 12px}
+.progress-station{background:var(--dark);border:3px solid #2e3378;padding:8px 10px;display:grid;grid-template-columns:1fr;gap:6px}
+.progress-heading{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.progress-heading strong{font:11px/1 var(--px);color:var(--ink);font-weight:400}
+.state{font-size:11px;padding:2px 7px;border:2px solid currentColor;white-space:nowrap}
+.state.working{color:var(--green);animation:pulse 1s steps(2) infinite}
+.state.service{color:var(--orange)}
+.state.waiting{color:var(--dim)}
+@keyframes pulse{50%{background:#5df28e22}}
+.progress-track{height:12px;background:#000;border:2px solid #3a3f86;position:relative;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(180deg,#9dffbf 0 30%,var(--green) 30%);transition:width .08s linear}
+.progress-track::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#0000 0 7px,#000 7px 9px)}
+.progress-caption{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.progress-caption strong{color:var(--cyan);font-weight:400}
+.bottleneck-station{border-color:var(--red)!important;animation:alarm 1.2s steps(1) infinite}
+.bottleneck-station .progress-heading strong{color:var(--red)}
+@keyframes alarm{50%{border-color:#7a1f3a!important;box-shadow:0 0 0 2px #ff4d6d44}}
+
+/* --- navigator dialog --- */
+.dialog{display:flex;gap:12px;align-items:flex-start;padding:22px 14px 16px}
+.navi{width:64px;height:64px;flex:none;background:var(--dark);border:3px solid var(--frame);image-rendering:pixelated}
+.navi svg{width:100%;height:100%;display:block;shape-rendering:crispEdges}
+.navi .eye{animation:blinkEye 3.2s steps(1) infinite}
+@keyframes blinkEye{94%{opacity:0}}
+.dialog-text{flex:1;min-width:0}
+.dialog-text .who{font:9px var(--px);color:var(--gold);margin-bottom:6px}
+.dialog-text p{margin:0 0 6px;font-size:13px;line-height:1.75;color:var(--ink)}
+.dialog-text #formulaText{font-size:11px;color:var(--sub);line-height:1.6}
+.bottleneck{color:var(--red)}
+.dialog::after{content:"▼";position:absolute;right:12px;bottom:6px;color:var(--gold);font-size:12px;animation:blink .8s steps(1) infinite}
+
+.footnote{color:var(--dim);font-size:11px;line-height:1.7;margin:4px 2px 0}
+.toast{position:fixed;z-index:300;left:50%;top:18px;transform:translate(-50%,-30px);opacity:0;pointer-events:none;transition:transform .2s steps(3),opacity .2s steps(3);
+ background:var(--win);color:var(--ink);border:3px solid var(--frame);box-shadow:0 0 0 3px var(--dark),5px 5px 0 3px #000a;padding:10px 16px;font-size:13px;max-width:calc(100vw - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:1180px){.workspace{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;align-items:start}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.hud{flex-wrap:wrap}.hud-stats{width:100%}.hud-stat{flex:1;min-width:0}.live{display:none}}
+@media(max-width:720px){.sidebar{grid-template-columns:1fr}.title h1{font-size:14px}.kbd-hint{display:none}.hud-stat .v{font-size:13px}.hud-stat.time .v{font-size:10px}.metric .val{font-size:13px}
+ .metric .ico{display:none}.screen-head h2 small{display:none}.btn{font-size:12px;padding:5px 8px}.build-tool{min-width:70px}.elapsed{font-size:14px}}
+@media(max-width:420px){.shell{padding:8px 8px 20px}.logo{width:38px;height:38px;font-size:15px}.title p{display:none}.hud-stat{padding:6px}.hud-stat .k{font-size:7px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="win hud">
+    <div class="brand"><div class="logo" aria-hidden="true">⚙</div>
+      <div class="title"><h1>BLOCK FACTORY</h1><p>搬送ラインシミュレーター <b>— 工場を組み立てて、最速のラインを目指せ！</b></p></div></div>
+    <div class="hud-stats" aria-live="polite">
+      <div class="hud-stat score" id="scoreBox"><span class="k">PRODUCED</span><span class="v" id="scoreVal">000</span></div>
+      <div class="hud-stat time"><span class="k">SIM TIME</span><span class="v" id="hudTime">0.0 min</span></div>
+      <div class="hud-stat rank" title="ガントリー1周と最長設備サイクルのバランス（揃うほど高ランク）"><span class="k">LINE RANK</span><span class="v" id="rankVal">-</span></div>
+    </div>
+    <div class="live">LIVE</div>
+  </header>
+
+  <main class="workspace">
+    <div class="content">
+      <section class="metrics" aria-live="polite">
+        <div class="win metric primary"><div class="ico">⏱</div><div class="m-body"><div class="small">理論ラインタクト</div><div class="val" id="cycleVal">—</div></div></div>
+        <div class="win metric"><div class="ico">▲</div><div class="m-body"><div class="small">理論生産能力</div><div class="val" id="capacityVal">—</div></div></div>
+        <div class="win metric"><div class="ico">◉</div><div class="m-body"><div class="small">ローダー占有率</div><div class="val" id="utilVal">—</div><div class="gauge"><i id="utilBar"></i></div></div></div>
+        <div class="win metric"><div class="ico">↻</div><div class="m-body"><div class="small">ガントリー最短1周</div><div class="val" id="lapVal">—</div></div></div>
+      </section>
+
+      <section class="win game-map-panel">
+        <span class="win-tab">▣ STAGE MAP</span>
+        <div class="screen-head"><h2>ファクトリーマップ<small>0.5 mグリッドに吸着・配置から搬送時間を概算</small></h2>
+          <div class="actions"><select id="layoutMode" class="speed-select" aria-label="設備配置"><option value="line">一列配置</option><option value="enclosed">囲み配置</option></select><button id="resetLayout" class="btn">↺ 配置リセット</button>
+            <button id="copyImage" class="btn primary"><svg class="icon" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></svg>配置図をコピー</button>
+            <button id="savePng" class="btn"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5"/><path d="M4 17v3h16v-3"/></svg>PNG保存</button>
+          </div>
+        </div>
+        <div class="monitor">
+          <div class="screen-bar"><span>◆ FACTORY WORLD · LIVE</span><span>0.5m GRID</span></div>
+          <div id="drawingScroll" class="drawing-scroll" tabindex="0" aria-label="加工ラインの2D上面図。フォーカス中にCtrl+Cで画像をコピーできます"><canvas id="lineCanvas" role="img" aria-label="ガントリーと加工機の上面図"></canvas></div>
+        </div>
+        <div class="hotbar"><button type="button" class="build-tool active" data-tool="select"><kbd>1</kbd>⌖ 選択</button><button type="button" class="build-tool" data-tool="move"><kbd>2</kbd>✥ 移動</button><button type="button" class="build-tool" data-tool="place"><kbd>3</kbd>＋ 設置</button><span id="buildHint">設備をタップして設定</span></div>
+        <div id="machineInspector" class="machine-inspector" hidden><strong id="inspectName">MC01</strong><label>加工前 <input id="inspectAux" type="number" min="0" step="0.1"></label><label>入替 <input id="inspectSwap" type="number" min="0" step="0.1"></label><label>加工 <input id="inspectProcess" type="number" min="0" step="0.1"></label><label>開始後 <input id="inspectPost" type="number" min="0" step="0.1"></label><button type="button" id="inspectClose">× 閉じる</button></div>
+        <div class="legend"><span class="bottleneck-summary" id="bottleneckBadge">◆ ボトルネック：判定中</span><span><i class="dot" style="background:#1d81b7"></i>加工中</span><span><i class="dot" style="background:#e6a448"></i>入替・作業</span><span><i class="dot" style="background:#93a6b9"></i>加工完了・待ち</span><span><i class="dot" style="background:#d2d9c3"></i>ガントリーレール</span></div>
+      </section>
+
+      <section class="win transport">
+        <span class="win-tab cyan">► CONTROLLER</span>
+        <div class="win-body">
+          <div class="transport-top"><div class="transport-controls"><button id="togglePlay" class="btn primary">▶ 再生</button><button id="resetPlay" class="btn">↺ 戻す</button><label class="help" for="playSpeed">SPEED</label><select id="playSpeed" class="speed-select"><option value="1">×1</option><option value="5">×5</option><option value="10" selected>×10</option><option value="30">×30</option><option value="100">×100</option></select></div><div class="elapsed" id="currentTime">0.0 min</div></div>
+          <input id="timeSlider" class="scrub" type="range" min="0" max="100" step="0.1" value="0" aria-label="シミュレーション時間">
+          <div class="transport-note"><span class="kbd-hint"><kbd>SPACE</kbd> 再生/停止　<kbd>R</kbd> 戻す　<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> ツール</span><span>END <span id="endTime">0.0 min</span></span></div>
+        </div>
+      </section>
+
+      <section class="win motion-card">
+        <span class="win-tab green">≡ TIMELINE</span>
+        <div class="motion-head"><span class="cap">上からMC01 → 最終設備 / 横軸：min</span></div>
+        <div class="motion-legend"><span><i class="legend-process"></i>加工</span><span><i class="legend-aux"></i>加工前作業</span><span><i class="legend-aux" style="background:#bd8ef0"></i>加工開始後作業</span><span><i class="legend-swap"></i>入替</span><span><i class="legend-loader"></i>ガントリー位置</span><span><i class="legend-idle"></i>ガントリー待機</span></div>
+        <div class="motion-scroll"><canvas id="motionCanvas" height="235" aria-label="設備別稼働時間とガントリー位置の動作線図"></canvas></div>
+      </section>
+    </div>
+
+    <aside class="sidebar">
+      <section class="win settings">
+        <span class="win-tab">⚙ SETUP</span>
+        <div class="win-body settings-fields">
+          <div class="field count-field"><label for="stationCount">設備台数</label><div class="stepper"><button id="countDown" aria-label="減らす">−</button><div class="inputrow"><input id="stationCount" type="number" min="1" max="12" step="1" value="5"></div><button id="countUp" aria-label="増やす">＋</button></div></div>
+          <div class="field"><label for="moveTime">隣接移動 (min)</label><div class="inputrow"><input id="moveTime" type="number" min="0" max="60" step="0.1" value="0.1"></div></div>
+          <div class="field option-field"><label class="checkline"><input id="extraBusy" type="checkbox" checked>加工前・開始後作業中はローダー停止</label></div>
+        </div>
+      </section>
+
+      <details class="win details" id="detailPane" open>
+        <summary><span class="win-tab cyan">☰ MACHINE LIST</span>マシンパラメータ（min）</summary>
+        <p class="details-helper">各設備の時間を個別に編集（単位 min・小数1桁）</p>
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>設備</th><th>入替</th><th>加工前</th><th>開始後</th><th>加工</th></tr></thead><tbody id="machineRows"></tbody></table></div>
+      </details>
+
+      <section class="win">
+        <span class="win-tab green">♥ PARTY STATUS</span>
+        <div class="status-grid" id="stationStatus"></div>
+      </section>
+
+      <section class="win insights">
+        <span class="win-tab red">! NAVI</span>
+        <div class="dialog">
+          <div class="navi" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="7" y="0" width="2" height="2" fill="#ffcc33"/><rect x="3" y="2" width="10" height="9" fill="#9aa3e8"/><rect x="4" y="3" width="8" height="6" fill="#0b0d26"/><g class="eye"><rect x="5" y="5" width="2" height="2" fill="#4fe3ff"/><rect x="9" y="5" width="2" height="2" fill="#4fe3ff"/></g><rect x="6" y="8" width="4" height="1" fill="#4fe3ff"/><rect x="2" y="5" width="1" height="3" fill="#6d74b0"/><rect x="13" y="5" width="1" height="3" fill="#6d74b0"/><rect x="5" y="11" width="6" height="4" fill="#6d74b0"/><rect x="6" y="12" width="4" height="2" fill="#ffcc33"/></svg></div>
+          <div class="dialog-text"><div class="who">NAVI-BOT</div><p id="analysisText"></p><p id="formulaText"></p></div>
+        </div>
+      </section>
+      <p class="footnote">※ 設備を任意配置できるガントリーローダーの簡易モデルです。順番に各設備を1回ずつ訪問し、最後から最初に空走で戻ります。ワークの入替えは2ハンドまたは受渡し機構で成立するものとし、1巡回につき完成品1個を計上します。移動時間は配置図上の直線距離に比例する概算で、障害物・曲線経路・設備干渉は考慮しません。加減速、干渉、段取り、故障、バッファ制約、立上がりロスなどは含みません。実機設計の確定値ではなく構想比較に利用してください。</p>
+    </aside>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const config={count:5,move:6,swap:12,aux:6,post:6,process:180,auxBusy:true,name:'ガントリー加工ライン'};
+const layouts={line:null,enclosed:null};let layoutMode='line',customPositions=[],activeAlignment=null,buildTool='select',selectedMachine=-1;
+const sampleProcess=[90,270,150,360,210,120,420,180,300,240,480,150];
+let lastProduced=0,machines=[],schedule=null,current=0,playing=false,lastFrame=0,raf=0,toastTimer=0;
+const GRID_PX=25, GRID_METERS=.5, GRID_ORIGIN_X=60, GRID_ORIGIN_Y=35;const PITCH=148;const colors={working:'#1d81b7',service:'#e6a448',waiting:'#93a6b9'};
+function cap(n,lo,hi){const v=Number(n);return Number.isFinite(v)?Math.min(hi,Math.max(lo,v)):lo}
+function fmt(n,d=1){if(!Number.isFinite(n))return '—';return (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('ja-JP',{maximumFractionDigits:d})}
+function minText(t){return (Math.round(Math.max(0,t||0)/6)/10).toFixed(1)+' min'}
+function hms(t,dec=false){t=Math.max(0,t||0);const minutes=Math.floor(t/60),seconds=Math.floor(t%60),frac=Math.floor((t-Math.floor(t))*10+.00001);return String(minutes).padStart(2,'0')+':'+String(seconds).padStart(2,'0')+(dec?'.'+frac:'')}
+function showToast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3300)}
+function defaultPosition(i){if(layoutMode==='enclosed'){const cols=Math.ceil(config.count/2),top=Math.min(i,cols);return i<cols?{x:.13+(i/Math.max(1,cols-1))*.74,y:.23}:{x:.13+((config.count-1-i)/Math.max(1,config.count-cols-1))*.74,y:.77}}return {x:.12+i/Math.max(1,config.count-1)*.76,y:.52}}
+function gridPosition(p){const x=Math.round((cap(p.x,.06,.94)*840)/GRID_PX)*GRID_PX/840;const y=Math.round((cap(p.y,.14,.88)*267)/GRID_PX)*GRID_PX/267;return {x:cap(x,GRID_PX/840,1-GRID_PX/840),y:cap(y,GRID_PX/267,1-GRID_PX/267)}}
+function posAt(i){return customPositions[i]||gridPosition(defaultPosition(i))}
+function distance(a,b){const p=posAt(a),q=posAt(b);return Math.hypot((p.x-q.x)/.76,(p.y-q.y)/.54)}
+function moveDuration(a,b){return config.move*distance(a,b)}
+function resetLayout(mode){layoutMode=mode;customPositions=Array.from({length:config.count},(_,i)=>gridPosition(defaultPosition(i)));recalculate()}
+function syncMachines(){while(machines.length<config.count){machines.push({name:'MC'+String(machines.length+1).padStart(2,'0'),swap:config.swap,aux:config.aux,post:config.post,process:sampleProcess[machines.length]??config.process})}machines.length=config.count;while(customPositions.length<config.count)customPositions.push(gridPosition(defaultPosition(customPositions.length)));customPositions.length=config.count}
+function applyInput(id,key,max,integer=false){const el=$(id);let value=cap(el.value,integer?1:0,max);if(integer)value=Math.round(value);el.value=String(value);config[key]=value;if(['swap','aux','post','process'].includes(key)){for(const m of machines)m[key]=value;buildRows()}if(key==='count')syncMachines();recalculate()}
+function buildRows(){const parent=$('machineRows');parent.textContent='';machines.forEach((m,i)=>{const tr=document.createElement('tr');const name=document.createElement('td'),nameInput=document.createElement('input');nameInput.className='name-field';nameInput.value=m.name;nameInput.maxLength=12;nameInput.setAttribute('aria-label',`設備${i+1}の名前`);nameInput.addEventListener('input',()=>{m.name=nameInput.value||('MC'+String(i+1).padStart(2,'0'));renderStatic()});name.append(nameInput);tr.append(name);for(const key of ['swap','aux','post','process']){const td=document.createElement('td'),inp=document.createElement('input');inp.type='number';inp.min='0';inp.max=key==='process'?'600':'60';inp.step='0.1';inp.value=(m[key]/60).toFixed(1);inp.setAttribute('aria-label',`${m.name}の${{swap:'入替',aux:'加工前',post:'開始後',process:'加工'}[key]}時間（min）`);inp.addEventListener('change',()=>{const v=cap(inp.value,0,key==='process'?600:60);m[key]=Math.round(v*10)*6;inp.value=(m[key]/60).toFixed(1);recalculate()});td.append(inp);tr.append(td)}parent.append(tr)}) ;markBottleneckRows()}
+function bottleneckInfo(){const r=getStats();return {index:r.limiter==='machine'?r.idx:-1,gantry:r.limiter==='gantry',name:r.limiter==='gantry'?'ガントリー':machines[r.idx].name}}
+function markBottleneckRows(){const b=bottleneckInfo();document.querySelectorAll('#machineRows tr').forEach((tr,i)=>{tr.classList.toggle('bottleneck-machine',i===b.index);tr.title=i===b.index?'ボトルネック設備':''})}
+function getStats(){let move=0;for(let i=0;i<config.count-1;i++)move+=moveDuration(i,i+1);if(config.count>1)move+=moveDuration(config.count-1,0);const busy=machines.reduce((sum,m)=>sum+m.swap+(config.auxBusy?m.aux+m.post:0),0);const occupancy=move+busy;const limits=machines.map(m=>m.aux+m.swap+Math.max(m.process,m.post));const maxMachine=Math.max(...limits);const cycle=Math.max(occupancy,maxMachine);const idx=limits.indexOf(maxMachine);return {move,busy,occupancy,cycle,capacity:cycle>0?3600/cycle:null,util:cycle>0?100*occupancy/cycle:0,limit:maxMachine,idx,limiter:occupancy>=maxMachine?'gantry':'machine'}}
+function putSegment(list,type,start,end,from,to,index,lap){if(end-start>1e-10)list.push({type,start,end,from,to,index,lap})}
+function buildSchedule(){const segments=[],visits=Array.from({length:config.count},()=>[]),ready=Array(config.count).fill(0),lapEnds=[];let t=0;for(let lap=0;lap<15;lap++){
+ for(let i=0;i<config.count;i++){const m=machines[i],x=i;
+  // Arrive and perform pre-machining service BEFORE exchanging the workpiece.
+  // This service can overlap machining still running from the previous visit.
+  const start=t,auxEnd=start+m.aux;
+  if(config.auxBusy)putSegment(segments,'aux',start,auxEnd,x,x,i,lap);
+  t=config.auxBusy?auxEnd:start;
+  const waitUntil=Math.max(t,ready[i]);putSegment(segments,'wait',t,waitUntil,x,x,i,lap);t=waitUntil;
+  const swapStart=t,swapEnd=swapStart+m.swap,postEnd=swapEnd+m.post,processEnd=swapEnd+m.process;
+  putSegment(segments,'swap',swapStart,swapEnd,x,x,i,lap);
+  if(config.auxBusy)putSegment(segments,'post',swapEnd,postEnd,x,x,i,lap);
+  t=config.auxBusy?postEnd:swapEnd;
+  ready[i]=Math.max(processEnd,postEnd);
+  visits[i].push({start,auxEnd,swapStart,swapEnd,postEnd,processEnd,lap});
+  if(i<config.count-1){const end=t+moveDuration(i,i+1);putSegment(segments,'move',t,end,i,i+1,i,lap);t=end}
+  else if(config.count>1){const end=t+moveDuration(i,0);putSegment(segments,'move',t,end,i,0,i,lap);t=end}
+ }
+ lapEnds.push(t)
+ }
+ return {segments,visits,lapEnds,total:Math.max(t,.1)}
+}
+function deriveMachineStatus(i,t){const arr=schedule.visits[i];let v=null;for(let j=arr.length-1;j>=0;j--){if(t>=arr[j].start){v=arr[j];break}}if(!v)return {label:'加工完了・待機',className:'waiting',color:colors.waiting};if(t<v.swapStart)return {label:t<v.auxEnd?'加工前作業':'加工完了待ち',className:'service',color:colors.service};if(t<v.swapEnd)return {label:'ワーク入替',className:'service',color:colors.service};if(t<v.processEnd)return {label:'加工中',className:'working',color:colors.working};return {label:'加工完了・待機',className:'waiting',color:colors.waiting}}
+function segmentAt(t){const list=schedule.segments;let lo=0,hi=list.length-1;while(lo<=hi){const m=(lo+hi)>>1;if(list[m].end<=t)lo=m+1;else hi=m-1}return list[lo]||null}
+function loaderAt(t){const seg=segmentAt(t);if(!seg)return {pos:0,status:'待機'};const mix=seg.end>seg.start?(t-seg.start)/(seg.end-seg.start):0;return {pos:seg.type==='move'?seg.from+(seg.to-seg.from)*mix:seg.from,status:({wait:'加工完了待ち',swap:'ワーク入替',aux:'加工前作業',post:'加工開始後作業',move:'移動中'})[seg.type]}}
+function recalculate(){syncMachines();if(selectedMachine>=config.count){selectedMachine=-1;$('machineInspector').hidden=true}const r=getStats();markBottleneckRows();const bottleneck=bottleneckInfo();$('bottleneckBadge').textContent='◆ ボトルネック：'+bottleneck.name;$('cycleVal').innerHTML=minText(r.cycle)+'<small>/個</small>';$('capacityVal').innerHTML=(r.capacity===null?'—':fmt(r.capacity))+'<small>個/時</small>';$('utilVal').innerHTML=fmt(r.util)+'<small>%</small>';$('lapVal').innerHTML=minText(r.occupancy);$('utilBar').style.width=Math.min(100,r.util)+'%';{const bal=r.cycle>0?Math.min(r.occupancy,r.limit)/Math.max(r.occupancy,r.limit):0;$('rankVal').textContent=r.cycle>0?(bal>=.9?'S':bal>=.75?'A':bal>=.55?'B':'C'):'-'}lastProduced=0;
+ let desc;if(r.cycle===0)desc='全入力が0.0 minのため、タクト・生産能力を算出できません。';else if(r.limiter==='gantry')desc=`<span class="bottleneck">ガントリーの搬送・入替作業が制約</span>です。加工待ちなしで1周 ${minText(r.occupancy)}（移動 ${minText(r.move)}、入替・ローダー占有作業 ${minText(r.busy)}）。`;else desc=`<span class="bottleneck">${escapeHtml(machines[r.idx].name)}の加工工程が制約</span>です。設備1回の実行時間（加工前＋入替＋MAX(加工, 開始後)）が ${minText(r.limit)}で、ガントリーの最短1周 ${minText(r.occupancy)}より長くなっています。`;
+ $('analysisText').innerHTML=desc;
+ $('formulaText').textContent=`ラインタクト = MAX［ガントリー最短1周 ${minText(r.occupancy)}、各設備の（加工前＋入替＋MAX(加工, 開始後)）最大 ${minText(r.limit)}］。理論生産能力 = 60 ÷ ラインタクト(min)。`;
+ schedule=buildSchedule();current=0;playing=false;lastFrame=0;updateButton();$('timeSlider').max=schedule.total;$('endTime').textContent=minText(schedule.total);renderStatic();
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))}
+function roundRect(ctx,x,y,w,h,r,fill,stroke,sw=1){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw;ctx.stroke()}}
+function drawText(ctx,str,x,y,size=12,color='#24394c',weight='500',align='left'){ctx.fillStyle=color;ctx.font=weight+' '+size+'px -apple-system,BlinkMacSystemFont,"Yu Gothic",Meiryo,sans-serif';ctx.textAlign=align;ctx.fillText(String(str),x,y)}
+function canvasWidth(){return 960}
+function stationX(i,w){return (w-(config.count-1)*PITCH)/2+i*PITCH}
+// Snap the dragged machine to another machine's horizontal/vertical centerline.
+function alignedPosition(index,p){
+ // Snap every machine center to the fixed 0.5 m grid; guide lines show alignment.
+ const snapped=gridPosition(p), threshold=GRID_PX*.48;
+ let snapX=null,snapY=null;
+ for(let i=0;i<config.count;i++){
+  if(i===index)continue;
+  const q=posAt(i);
+  if(Math.abs((q.x-snapped.x)*840)<threshold)snapX=snapped.x;
+  if(Math.abs((q.y-snapped.y)*267)<threshold)snapY=snapped.y;
+ }
+ activeAlignment={x:snapX,y:snapY};
+ return snapped;
+}
+function renderDiagramClassic(ctx,w,h,print=false){
+ ctx.clearRect(0,0,w,h);ctx.fillStyle='#f9fbfe';ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle='#dce7f1';ctx.lineWidth=.8;
+ for(let x=GRID_ORIGIN_X;x<=w-35;x+=GRID_PX){ctx.beginPath();ctx.moveTo(x,10);ctx.lineTo(x,h-25);ctx.stroke()}
+ for(let x=GRID_ORIGIN_X-GRID_PX;x>=10;x-=GRID_PX){ctx.beginPath();ctx.moveTo(x,10);ctx.lineTo(x,h-25);ctx.stroke()}
+ for(let y=GRID_ORIGIN_Y;y<=h-25;y+=GRID_PX){ctx.beginPath();ctx.moveTo(10,y);ctx.lineTo(w-10,y);ctx.stroke()}
+ for(let y=GRID_ORIGIN_Y-GRID_PX;y>=10;y-=GRID_PX){ctx.beginPath();ctx.moveTo(10,y);ctx.lineTo(w-10,y);ctx.stroke()}
+ drawText(ctx,'1マス = 0.5 m',w-12,15,11,'#607c95','700','right');
+ const point=i=>({x:GRID_ORIGIN_X+posAt(i).x*(w-120),y:GRID_ORIGIN_Y+posAt(i).y*(h-85)});
+ if(activeAlignment&&!print){ctx.save();ctx.strokeStyle='#13a7a2';ctx.lineWidth=1.6;ctx.setLineDash([6,5]);
+  if(activeAlignment.x!==null){const x=GRID_ORIGIN_X+activeAlignment.x*(w-120);ctx.beginPath();ctx.moveTo(x,8);ctx.lineTo(x,h-8);ctx.stroke()}
+  if(activeAlignment.y!==null){const y=GRID_ORIGIN_Y+activeAlignment.y*(h-85);ctx.beginPath();ctx.moveTo(8,y);ctx.lineTo(w-8,y);ctx.stroke()}
+  ctx.restore();}
+
+ ctx.strokeStyle='#5b7895';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();for(let i=0;i<config.count;i++){const p=point(i);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}if(config.count>1)ctx.lineTo(point(0).x,point(0).y);ctx.stroke();
+ for(let i=0;i<config.count;i++){const p=point(i),m=machines[i],state=print?{color:'#66829a',label:'加工機'}:deriveMachineStatus(i,current);const isBottleneck=getStats().limiter==='machine'&&getStats().idx===i;roundRect(ctx,p.x-51,p.y-34,102,68,9,isBottleneck?'#fff4e4':'#fff',isBottleneck?'#d97724':'#b7cadc',isBottleneck?3:1.5);roundRect(ctx,p.x-49,p.y-32,98,7,3,state.color);drawText(ctx,m.name,p.x,p.y-9,12,isBottleneck?'#a65112':'#213d56','800','center');if(isBottleneck)drawText(ctx,'◆ 制約設備',p.x,p.y-22,9,'#b65d12','800','center');
+ let progress=0,remaining=null;if(!print){const arr=schedule.visits[i];let visit=null;for(let j=arr.length-1;j>=0;j--){if(current>=arr[j].start){visit=arr[j];break}}if(visit){const duration=visit.processEnd-visit.swapEnd;if(current>=visit.swapEnd&&current<visit.processEnd&&duration>0){progress=Math.max(0,Math.min(1,(current-visit.swapEnd)/duration));remaining=Math.max(0,visit.processEnd-current)}else if(current>=visit.processEnd)progress=1}}
+ roundRect(ctx,p.x-38,p.y,76,7,3,'#dbe5ef');if(progress>0)roundRect(ctx,p.x-38,p.y,76*progress,7,3,'#2184b6');drawText(ctx,remaining===null?state.label:'残 '+(remaining/60).toFixed(1)+' min',p.x,p.y+22,10,'#17628d','700','center');}
+ const seg=print?null:segmentAt(current);let loader=point(0);if(seg){const a=point(seg.from),b=point(seg.to),f=seg.type==='move'?(current-seg.start)/Math.max(.001,seg.end-seg.start):0;loader={x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f}}
+ ctx.save();ctx.shadowColor='#cf9b48';ctx.shadowBlur=8;roundRect(ctx,loader.x-15,loader.y-47,30,22,5,'#e8aa46','#ad792c');ctx.restore();drawText(ctx,'G',loader.x,loader.y-31,12,'#593b13','800','center');
+ if(!print)drawText(ctx,'設備中心を0.5 mグリッドに吸着・縦横の整列ガイド付き',12,h-10,11,'#71869a');
+}
+
+// Playable factory-map renderer. Shares the original schedule, snapping, pointer editing and exports.
+function renderDiagram(ctx,w,h,print=false){
+ ctx.clearRect(0,0,w,h);ctx.imageSmoothingEnabled=false;
+ const tile=25,ox=GRID_ORIGIN_X,oy=GRID_ORIGIN_Y;
+ ctx.fillStyle='#66845d';ctx.fillRect(0,0,w,h);
+ // Pixelated elevated factory floor, paving, grass and roads.
+ for(let y=0;y<h;y+=tile)for(let x=0;x<w;x+=tile){const n=((Math.floor(x/tile)*19+Math.floor(y/tile)*11)%9);ctx.fillStyle=n<3?'#64835f':n<6?'#6c8b66':'#72916c';ctx.fillRect(x,y,tile,tile);ctx.fillStyle='#577756';ctx.fillRect(x+tile-2,y,2,tile);ctx.fillRect(x,y+tile-2,tile,2);if(n===2){ctx.fillStyle='#8fa780';ctx.fillRect(x+7,y+5,4,4);ctx.fillRect(x+16,y+16,4,4)}}
+ // The elevated factory platform uses a chunky stone edge.
+ ctx.fillStyle='#2b4139';ctx.fillRect(15,34,w-30,h-53);ctx.fillStyle='#9fae91';ctx.fillRect(15,28,w-30,h-59);ctx.fillStyle='#819982';ctx.fillRect(19,32,w-38,h-67);
+ for(let y=32;y<h-35;y+=tile)for(let x=19;x<w-19;x+=tile){ctx.fillStyle=(Math.floor(x/tile)+Math.floor(y/tile))%2?'#849b87':'#90a58e';ctx.fillRect(x,y,tile-1,tile-1)}
+ const point=i=>({x:ox+posAt(i).x*(w-120),y:oy+posAt(i).y*(h-85)});
+ // Gantry rails and floor safety striping.
+ if(config.count>1){ctx.save();ctx.strokeStyle='#dfc45b';ctx.lineWidth=24;ctx.lineJoin='bevel';ctx.setLineDash([13,9]);ctx.beginPath();for(let i=0;i<config.count;i++){const p=point(i);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.lineTo(point(0).x,point(0).y);ctx.stroke();ctx.restore()}
+ ctx.save();ctx.lineJoin='bevel';ctx.lineCap='square';ctx.strokeStyle='#273a3c';ctx.lineWidth=12;ctx.beginPath();for(let i=0;i<config.count;i++){const p=point(i);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}if(config.count>1)ctx.lineTo(point(0).x,point(0).y);ctx.stroke();ctx.strokeStyle='#d2d9c3';ctx.lineWidth=4;ctx.stroke();ctx.restore();
+ if(activeAlignment&&!print){ctx.save();ctx.strokeStyle='#f9ef88';ctx.lineWidth=2;ctx.setLineDash([7,5]);if(activeAlignment.x!==null){const x=ox+activeAlignment.x*(w-120);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}if(activeAlignment.y!==null){const y=oy+activeAlignment.y*(h-85);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}ctx.restore()}
+ const rect=(x,y,a,b,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(a),Math.round(b))};
+ const poly=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill()};
+ const blink=Math.floor(current*2)%2===0;
+ // Y-sorted painter's order: machines overlap as physical voxel objects.
+ const order=Array.from({length:config.count},(_,i)=>i).sort((a,b)=>point(a).y-point(b).y);
+ for(const i of order){const p=point(i),m=machines[i],status=print?{color:'#55b4a8',label:'加工中'}:deriveMachineStatus(i,current),b=bottleneckInfo().index===i,selected=i===selectedMachine;
+  const x=Math.round(p.x-32),y=Math.round(p.y-15),z=23,depth=16,width=65,height=42;
+  rect(x+6,y+height+8,80,9,'#41564a');
+  // machine roof, left face and side face: actual block-like pixel volumes.
+  poly([[x,y],[x+depth,y-z],[x+width+depth,y-z],[x+width,y]],b?'#ffce61':selected?'#8ff7d0':'#b2c5b2');
+  poly([[x+width,y],[x+width+depth,y-z],[x+width+depth,y+height-z],[x+width,y+height]],b?'#9b672b':'#52766e');
+  rect(x,y,width,height,b?'#b98739':'#678a7b');rect(x+4,y+4,width-8,height-8,'#293f3d');
+  rect(x+8,y+8,31,24,'#0c222a');rect(x+11,y+11,25,18,status.color);rect(x+14,y+14,19,12,'#16343a');
+  rect(x+18,y+16,5,7,'#d3f7e9');rect(x+26,y+16,5,7,'#81d6df');
+  rect(x+43,y+8,14,24,'#172c32');rect(x+46,y+11,8,7,'#b7d9c4');rect(x+46,y+23,4,4,blink?'#f6d260':'#956b3d');rect(x+52,y+23,4,4,'#e27661');
+  // chunky cooling fan and rotating spindle.
+  rect(x+16,y-13,21,11,'#506a62');rect(x+19,y-16,15,5,'#c1d4be');rect(x+24+(blink?2:0),y-11,5,7,'#203e43');
+  rect(x+4,y+height-5,width-8,3,'#a8c9a6');
+  if(selected){ctx.strokeStyle='#fff5a1';ctx.lineWidth=3;ctx.strokeRect(x-5,y-z-5,width+depth+10,height+z+13)}
+  if(b){rect(x-6,y-z-10,width+depth+12,5,'#ffcf55');rect(x-6,y+height+4,width+depth+12,4,'#ffcf55')}
+  ctx.font='bold 12px "DotGothic16",monospace';ctx.textAlign='center';ctx.fillStyle='#12231d';ctx.fillText(m.name,p.x+1,p.y-49);ctx.fillStyle=b?'#ffdf69':'#f4ffe9';ctx.fillText(m.name,p.x,p.y-51);
+  if(b){ctx.fillStyle='#ffd262';ctx.font='bold 9px "DotGothic16",monospace';ctx.fillText('! BOTTLENECK',p.x,p.y-65)}
+  let progress=0,remaining=null;if(!print){const arr=schedule.visits[i];let visit=null;for(let j=arr.length-1;j>=0;j--){if(current>=arr[j].start){visit=arr[j];break}}if(visit){const dur=visit.processEnd-visit.swapEnd;if(current>=visit.swapEnd&&current<visit.processEnd&&dur>0){progress=Math.max(0,Math.min(1,(current-visit.swapEnd)/dur));remaining=Math.max(0,visit.processEnd-current)}else if(current>=visit.processEnd)progress=1}}
+  rect(p.x-35,p.y+35,70,9,'#172920');rect(p.x-33,p.y+37,Math.floor(66*progress),5,'#75e9ad');ctx.fillStyle='#f7ffe8';ctx.font='bold 10px "DotGothic16",monospace';ctx.fillText(remaining===null?status.label:'残 '+(remaining/60).toFixed(1)+' min',p.x,p.y+57);
+  // particle effects only while running, deterministic per simulation time.
+  if(status.label==='加工中'&&!print){for(let k=0;k<3;k++){const t=(current*2+k*13)%19;rect(p.x+22+k*5,p.y-31-t,3,3,k%2?'#ffe28c':'#c6efec')}}
+ }
+ const seg=print?null:segmentAt(current);let loader=point(0);if(seg){const a=point(seg.from),b=point(seg.to),f=seg.type==='move'?(current-seg.start)/Math.max(.001,seg.end-seg.start):0;loader={x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f}}
+ // The travelling gantry is a yellow block crane with shadow, hoist and lamp.
+ rect(loader.x-23,loader.y-74,48,7,'#243a31');rect(loader.x-23,loader.y-87,46,17,'#e7b34e');rect(loader.x-17,loader.y-94,34,9,'#ffdf76');rect(loader.x-14,loader.y-82,28,9,'#6d512d');rect(loader.x-4,loader.y-69,8,27,'#ffd060');rect(loader.x-11,loader.y-42,22,8,'#e5ac41');rect(loader.x-16,loader.y-36,7,12,'#3e4a3d');rect(loader.x+9,loader.y-36,7,12,'#3e4a3d');rect(loader.x+14,loader.y-86,5,5,blink?'#fff6aa':'#ac7933');
+ ctx.font='bold 11px "DotGothic16",monospace';ctx.textAlign='center';ctx.fillStyle='#fff5ca';ctx.fillText('GANTRY',loader.x,loader.y-100);
+ rect(8,6,218,21,'#1d3d31');ctx.font='bold 12px "DotGothic16",monospace';ctx.textAlign='left';ctx.fillStyle='#e8f6c6';ctx.fillText('▣ FACTORY WORLD · 0.5m GRID',15,21);
+ if(!print){ctx.textAlign='right';ctx.font='bold 10px "DotGothic16",monospace';ctx.fillStyle='#163127';ctx.fillText('SELECT / MOVE / BUILD',w-10,h-9)}
+}
+
+function renderMotion(){
+ const cv=$('motionCanvas');if(!cv||!schedule)return;
+ const W=Math.max(720,cv.parentElement.clientWidth-2),H=Math.max(210,config.count*36+68),dpr=Math.min(window.devicePixelRatio||1,2);
+ cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';
+ const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.imageSmoothingEnabled=false;
+ const L=73,R=24,T=34,B=38,plotW=W-L-R,plotH=H-T-B;
+ const horizon=Math.max(1,Math.min(schedule.total,Math.max(360,getStats().cycle*3)));
+ const X=t=>L+Math.max(0,Math.min(horizon,t))/horizon*plotW;
+ const Y=pos=>T+(config.count===1?.5:pos/(config.count-1))*plotH;
+ const block=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)))};
+ const label=(txt,x,y,color='#d6e9b7',align='left',size=11)=>{c.font='bold '+size+'px "DotGothic16",monospace';c.textAlign=align;c.fillStyle='#08141a';c.fillText(txt,x+1,y+1);c.fillStyle=color;c.fillText(txt,x,y)};
+ // Pixel-art monitor housing and a dark gridded plotting field.
+ block(0,0,W,H,'#18291f');block(3,3,W-6,H-6,'#7b9275');block(7,7,W-14,H-14,'#20372c');
+ block(L-7,T-15,plotW+14,plotH+30,'#0a1817');block(L-4,T-12,plotW+8,plotH+24,'#142a29');
+ label('▣ MACHINE TIMELINE',14,21,'#ffe08b','left',12);
+ label('TIME →',W-17,21,'#90d5bb','right',10);
+ const step=Math.max(.5,Math.ceil(horizon/60/8*2)/2);
+ for(let min=0;min<=horizon/60+1e-6;min+=step){const x=Math.round(X(min*60));
+   for(let yy=T-7;yy<=H-B+8;yy+=8)block(x,yy,1,3,'#294d47');
+   label(min.toFixed(1),x,H-14,'#9bb8a9','center',10);
+ }
+ const bn=bottleneckInfo();
+ for(let i=0;i<config.count;i++){
+   const y=Math.round(Y(i));
+   if(bn.index===i){block(L-3,y-15,plotW+6,30,'#584528');block(L,y-13,plotW,26,'#342e21')}
+   for(let xx=L;xx<W-R;xx+=12)block(xx,y,6,1,'#35504a');
+   label(machines[i].name,L-10,y+4,bn.index===i?'#ffd05c':'#c4e1c2','right',11);
+   if(bn.index===i)block(8,y-4,5,8,'#ffbc43');
+ }
+ // Segmented bars mimic pixel tiles; parallel work appears as a separate narrow stripe.
+ const bands=[['swapEnd','swapStart','#a9b7c7'],['processEnd','swapEnd','#4ac990'],['auxEnd','start','#f3b34c'],['postEnd','swapEnd','#bd8ef0']];
+ for(let i=0;i<config.count;i++){
+   const y=Y(i);
+   for(const v of schedule.visits[i]){
+     if(v.start>=horizon)break;
+     for(const [finish,begin,color] of bands){
+       const t0=Math.max(0,v[begin]),t1=Math.min(horizon,v[finish]);if(!(t1>t0))continue;
+       const work=finish==='auxEnd'||finish==='postEnd',x0=X(t0),x1=X(t1),by=Math.round(y+(work?3:-10)),bh=work?6:10;
+       block(x0,by,x1-x0,bh,'#091a1b');block(x0+1,by+1,Math.max(1,x1-x0-2),bh-2,color);
+       for(let px=x0+8;px<x1-1;px+=9)block(px,by+1,2,bh-2,'#142a29');
+     }
+   }
+ }
+ // Waiting is a flashing-red-style striped segment, not confused with travel.
+ for(const seg of schedule.segments){
+   if(seg.type!=='wait'||seg.start>=horizon)continue;
+   const t0=Math.max(0,seg.start),t1=Math.min(horizon,seg.end);if(t1<=t0)continue;
+   const y=Math.round(Y(seg.from)),x0=X(t0),x1=X(t1);
+   block(x0,y-3,x1-x0,7,'#8f2631');
+   for(let px=x0;px<x1;px+=10)block(px,y-3,6,7,'#ff6671');
+   if(x1-x0>66)label(((t1-t0)/60).toFixed(1)+'m WAIT',(x0+x1)/2,y-16,'#ff9d9d','center',10);
+ }
+ // Stair-stepped, bright cyan gantry trace: no antialiasing or smooth line caps.
+ c.save();c.strokeStyle='#071c20';c.lineWidth=6;c.lineJoin='miter';c.beginPath();let started=false;
+ for(const seg of schedule.segments){if(seg.start>=horizon)break;const end=Math.min(seg.end,horizon),y1=Y(seg.from),y2=Y(seg.type==='move'?seg.from+(seg.to-seg.from)*(end-seg.start)/(seg.end-seg.start):seg.from);
+   if(!started){c.moveTo(X(seg.start),y1);started=true}else c.lineTo(X(seg.start),y1);c.lineTo(X(end),y2);
+ }c.stroke();c.strokeStyle='#5be8f3';c.lineWidth=3;c.stroke();c.restore();
+ if(current<=horizon){const x=Math.round(X(current)),p=loaderAt(current).pos;
+   for(let yy=T-8;yy<H-B+8;yy+=9)block(x,yy,2,5,'#ffe18a');
+   block(x-6,Y(p)-6,13,13,'#08141a');block(x-4,Y(p)-4,9,9,'#ffdf5e');block(x-2,Y(p)-2,5,5,'#fff5ba');
+ }
+ label('min',W-R+7,H-14,'#9bb8a9','left',10);
+}
+function renderStatic(){if(!schedule)return;const width=canvasWidth(),height=352,cv=$('lineCanvas');const dpr=Math.min(window.devicePixelRatio||1,2);cv.width=Math.round(width*dpr);cv.height=Math.round(height*dpr);cv.style.width='100%';cv.style.height='auto';const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);renderDiagram(ctx,width,height,false);updateStatus();renderMotion()}
+function updateStatus(){if(!schedule)return;let statuses='';for(let i=0;i<config.count;i++){const s=deriveMachineStatus(i,current),m=machines[i];const arr=schedule.visits[i];let visit=null;for(let j=arr.length-1;j>=0;j--){if(current>=arr[j].start){visit=arr[j];break}}let pct=0,remaining=null;if(visit){const duration=Math.max(0,visit.processEnd-visit.swapEnd);if(current>=visit.swapEnd&&current<visit.processEnd&&duration>0){pct=Math.min(100,Math.max(0,(current-visit.swapEnd)/duration*100));remaining=Math.max(0,visit.processEnd-current)}else if(current>=visit.processEnd){pct=100}}const caption=remaining!==null?'残り '+minText(remaining):s.className==='waiting'?'加工待機中':s.className==='service'?'ワーク入替中':'—';statuses+=`<div class="station-mini progress-station ${bottleneckInfo().index===i?'bottleneck-station':''}"><div class="progress-heading"><strong>${escapeHtml(m.name)}${bottleneckInfo().index===i?' ◆':''}</strong><span class="state ${s.className}">${s.label}</span></div><div class="progress-track" role="progressbar" aria-label="${escapeHtml(m.name)} 加工進捗" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" style="width:${pct.toFixed(2)}%"></div></div><div class="progress-caption"><span>${minText(m.process)}設定</span><strong>${caption}</strong></div></div>`}$('stationStatus').innerHTML=statuses;$('currentTime').textContent=minText(current);$('hudTime').textContent=minText(current);updateScore();$('timeSlider').value=current}
+function updateScore(){const n=schedule.lapEnds.filter(t=>t<=current+1e-9).length;$('scoreVal').textContent=String(n).padStart(3,'0');if(n>lastProduced&&playing){const box=$('scoreBox');box.classList.remove('bump');void box.offsetWidth;box.classList.add('bump');const s=document.createElement('span');s.className='plus';s.textContent='+'+(n-lastProduced);box.append(s);setTimeout(()=>s.remove(),1000)}lastProduced=n}
+function updateButton(){document.body.classList.toggle('is-playing',playing);$('togglePlay').textContent=playing?'❚❚ 一時停止':'▶ 再生'}
+function tick(ts){if(!playing){lastFrame=0;return}if(!lastFrame)lastFrame=ts;const dt=Math.min((ts-lastFrame)/1000,.25),speed=Number($('playSpeed').value)||10;lastFrame=ts;current+=dt*speed;if(current>=schedule.total){current=schedule.total;playing=false;lastFrame=0;updateButton();renderStatic();showToast('★ SIMULATION CLEAR ★　完成 '+schedule.lapEnds.length+' 個')}renderStatic();if(playing)raf=requestAnimationFrame(tick)}
+function setPlaying(v){playing=v;if(v&&current>=schedule.total)current=0;lastFrame=0;updateButton();if(v){cancelAnimationFrame(raf);raf=requestAnimationFrame(tick)}}
+function exportCanvas(scale=2){const w=canvasWidth(),h=352,c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const context=c.getContext('2d');context.setTransform(scale,0,0,scale,0,0);renderDiagram(context,w,h,true);return c}
+function blobFromCanvas(canvas){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('PNG変換に失敗しました')),'image/png'))}
+function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+function fileName(){return ('gantry_layout').replace(/[\\/:*?"<>|]/g,'_').slice(0,30)+'_上面図.png'}
+async function copyImage(){try{const blob=await blobFromCanvas(exportCanvas(2));if(navigator.clipboard&&navigator.clipboard.write&&typeof ClipboardItem!=='undefined'){
+ try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);showToast('上面図を画像コピーしました。PowerPoint・Excelに Ctrl+V で貼り付けられます。');return}catch(e){console.warn('Clipboard API:',e)}
+ }downloadBlob(blob,fileName());showToast('このブラウザでは画像コピーが制限されているため、代わりにPNGを保存しました。');}catch(e){console.error(e);showToast('画像の出力に失敗しました')}}
+async function savePng(){try{const blob=await blobFromCanvas(exportCanvas(3));downloadBlob(blob,fileName());showToast('高解像度PNGを保存しました')}catch(e){console.error(e);showToast('画像の保存に失敗しました')}}
+function selectMachine(i){selectedMachine=i;const pane=$('machineInspector');pane.hidden=i<0;if(i>=0){const m=machines[i];$('inspectName').textContent=m.name;for(const [id,key] of [['inspectAux','aux'],['inspectSwap','swap'],['inspectProcess','process'],['inspectPost','post']])$(id).value=(m[key]/60).toFixed(1)}renderStatic()}
+function placeMachine(p){if(config.count>=12){showToast('設備は最大12台です');return}config.count++;$('stationCount').value=config.count;syncMachines();customPositions[config.count-1]=gridPosition(p);buildRows();recalculate();selectMachine(config.count-1)}
+function setBuildTool(tool){buildTool=tool;document.querySelectorAll('.build-tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));$('buildHint').textContent=({select:'設備をタップして編集',move:'設備をドラッグして移動',place:'空き地をタップして設備を設置（最大12台）'})[tool]}
+function init(){syncMachines();buildRows();for(const [id,key,max,isInt] of [['stationCount','count',12,true],['moveTime','move',3600,false]]){
+ const el=$(id);el.addEventListener('change',()=>{if(key==='move'){config.move=Math.round(cap(el.value,0,60)*10)*6;el.value=(config.move/60).toFixed(1);recalculate()}else{applyInput(id,key,max,isInt);if(key==='count')buildRows()}});
+ }
+ $('stationCount').addEventListener('input',e=>{const v=Number(e.target.value);if(v>=1&&v<=12&&Number.isInteger(v)){config.count=v;syncMachines();buildRows();recalculate()}});
+ $('countDown').addEventListener('click',()=>{config.count=Math.max(1,config.count-1);$('stationCount').value=config.count;syncMachines();buildRows();recalculate()});
+ $('countUp').addEventListener('click',()=>{config.count=Math.min(12,config.count+1);$('stationCount').value=config.count;syncMachines();buildRows();recalculate()});
+ $('extraBusy').addEventListener('change',e=>{config.auxBusy=e.target.checked;recalculate()});
+
+ $('layoutMode').addEventListener('change',e=>resetLayout(e.target.value));$('resetLayout').addEventListener('click',()=>resetLayout(layoutMode));
+ document.querySelectorAll('.build-tool').forEach(b=>b.addEventListener('click',()=>setBuildTool(b.dataset.tool)));
+ $('inspectClose').addEventListener('click',()=>selectMachine(-1));
+ for(const [id,key] of [['inspectAux','aux'],['inspectSwap','swap'],['inspectProcess','process'],['inspectPost','post']])$(id).addEventListener('change',e=>{if(selectedMachine<0)return;machines[selectedMachine][key]=Math.round(cap(e.target.value,0,600)*10)*6;buildRows();recalculate();selectMachine(selectedMachine)});
+ const cv=$('lineCanvas');let dragging=-1;
+ function pointerPosition(e){const rect=cv.getBoundingClientRect(),w=canvasWidth(),h=352;return {x:((e.clientX-rect.left)/rect.width*w-GRID_ORIGIN_X)/(w-120),y:((e.clientY-rect.top)/rect.height*h-GRID_ORIGIN_Y)/(h-85)}}
+ cv.style.touchAction='pan-x pan-y';cv.style.cursor='grab';
+ cv.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;const p=pointerPosition(e);let best=Infinity,hit=-1;for(let i=0;i<config.count;i++){const q=posAt(i),d=Math.hypot((q.x-p.x)*840,(q.y-p.y)*267);if(d<best&&d<62){best=d;hit=i}}if(hit>=0){selectMachine(hit);if(buildTool==='move'){dragging=hit;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing'}}else if(buildTool==='place'){placeMachine(p)}else selectMachine(-1)});
+ cv.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||dragging<0)return;const p=pointerPosition(e);customPositions[dragging]=alignedPosition(dragging,p);recalculate()});
+ // On touchscreens, swiping empty space scrolls normally. Dragging starts only on a machine.
+ let touchDrag=-1;
+ cv.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0],p=pointerPosition(t);let best=Infinity;touchDrag=-1;for(let i=0;i<config.count;i++){const q=posAt(i),d=Math.hypot((q.x-p.x)*840,(q.y-p.y)*267);if(d<best&&d<62){best=d;touchDrag=i}}if(touchDrag>=0){selectMachine(touchDrag);if(buildTool!=='move')touchDrag=-1;else e.preventDefault()}else if(buildTool==='place'){placeMachine(p);e.preventDefault()}else selectMachine(-1)},{passive:false});
+ cv.addEventListener('touchmove',e=>{if(touchDrag<0||e.touches.length!==1)return;e.preventDefault();const p=pointerPosition(e.touches[0]);customPositions[touchDrag]=alignedPosition(touchDrag,p);recalculate()},{passive:false});
+ cv.addEventListener('touchend',()=>{touchDrag=-1;activeAlignment=null;renderStatic()});cv.addEventListener('touchcancel',()=>{touchDrag=-1;activeAlignment=null;renderStatic()});
+ cv.addEventListener('pointerup',()=>{dragging=-1;activeAlignment=null;cv.style.cursor='grab';renderStatic()});cv.addEventListener('pointercancel',()=>{dragging=-1;activeAlignment=null;cv.style.cursor='grab';renderStatic()});
+ $('copyImage').addEventListener('click',copyImage);$('savePng').addEventListener('click',savePng);
+ $('togglePlay').addEventListener('click',()=>setPlaying(!playing));$('resetPlay').addEventListener('click',()=>{setPlaying(false);current=0;renderStatic()});
+ $('timeSlider').addEventListener('input',e=>{current=cap(e.target.value,0,schedule.total);lastFrame=0;renderStatic()});
+ $('drawingScroll').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'&&window.getSelection().toString()===''){e.preventDefault();copyImage()}});
+ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const tag=(e.target.tagName||'').toLowerCase();if(['input','select','textarea','button','summary'].includes(tag))return;
+  if(e.key===' '){e.preventDefault();setPlaying(!playing)}else if(e.key==='r'||e.key==='R'){setPlaying(false);current=0;renderStatic()}else if(['1','2','3'].includes(e.key)){setBuildTool(['select','move','place'][+e.key-1])}});
+ recalculate();
+}
+init();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>renderStatic());
+})();
+</script>
+</body>
+</html>
