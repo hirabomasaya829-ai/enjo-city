@@ -851,27 +851,29 @@ window.PX = (() => {
   // ---------- スプライト ----------
   const FF_PAL = {
     k: '#2a1f2e', y: '#ffd21f', Y: '#e2a400', w: '#ffffff', h: '#2b1d1a', s: '#ffd9b8',
-    e: '#2a1f2e', p: '#ff9c9c', r: '#e2412b', R: '#a92d22', l: '#ffe066', g: '#3a3a46', b: '#3a2a2a',
+    e: '#2a1f2e', m: '#c0504a', p: '#ff9c9c', L: '#fff3a8', r: '#e2412b', R: '#a92d22', l: '#ffe066', g: '#3a3a46', b: '#3a2a2a',
   };
   const FF_HEAD = [
-    '...kkkkkk...',
-    '..kyyyyyyk..',
-    '.kyyyywwyyk.',
-    '.kyyyywwyyk.',
-    'kYyyyyyyyyYk',
-    'kkYYYYYYYYkk',
-    '.khhhhhhhhk.',
-    '.khhssssshk.',
-    '.khsesssesk.',
-    '.kspssssspk.',
-    '..kkrrrrkk..',
-    '.krrlrrlrrk.',
-    'kgrrrrrrrrgk',
-    '.kllllllllk.',
+    '....kkkkkk....',
+    '..kkyyyyyykk..',
+    '.kyyyyLyyyyyk.',
+    '.kyyyywwyyyyk.',
+    'kyyyywrrwyyyyk',
+    'kyyyyywwyyyyyk',
+    'kYYYYYYYYYYYYk',
+    '.khhhhhhhhhhk.',
+    '.khhsshhsshhk.',
+    '.khsssssssshk.',
+    '.kssessssessk.',
+    '.kpsessssespk.',
+    '..kkssmmsskk..',
+    '.krrrlrrlrrrk.',
+    'kgrrrlrrlrrrgk',
+    'kgllllllllllgk',
   ];
-  const FF_A = FF_HEAD.concat(['.kRRRkkRRRk.', '.kbbk..kbbk.']);
-  const FF_B = FF_HEAD.concat(['..kRRkkRRRk.', '..kbbk..kbbk']);
-  const FF_C = FF_HEAD.concat(['.kRRRkkRRk..', 'kbbk..kbbk..']);
+  const FF_A = FF_HEAD.concat(['.kRRRRkkRRRRk.', '.kbbbk..kbbbk.']);
+  const FF_B = FF_HEAD.concat(['..kRRRkkRRRRk.', '..kbbk..kbbbk.']);
+  const FF_C = FF_HEAD.concat(['.kRRRRkkRRRk..', '.kbbbk..kbbk..']);
   const PLAYER_PAL = Object.assign({}, FF_PAL, { y: '#ff5a4a', Y: '#c8322a', w: '#ffffff' });
 
   const CONE = [
@@ -1077,6 +1079,9 @@ window.PX = (() => {
       else if (b.type === 'shop') drawShop(c, b);
       else drawApt(c, b);
       drawSign(c, b);
+      const wt = b.type === 'house' ? b.roofBase : b.top;
+      R(c, b.x - 1, wt, 1, GROUND - wt, '#6b4a3a');
+      R(c, b.x + b.w, wt, 1, GROUND - wt, '#6b4a3a');
       b.cx = b.x + b.w / 2;
     });
     // 歩道
@@ -1145,6 +1150,17 @@ window.PX = (() => {
     [x + 20, x + 84].forEach(wx => { circ(c, wx, y - 6, 6, '#26262e'); circ(c, wx, y - 6, 3, '#b9c1cc'); R(c, wx - 1, y - 7, 2, 2, '#ffffff'); });
   }
 
+  // ---------- 赤い車（左端） ----------
+  function drawCar(c, x, y) {
+    R(c, x, y - 2, 40, 3, 'rgba(0,0,0,0.18)');
+    R(c, x, y - 14, 40, 10, '#c9302a');
+    R(c, x + 6, y - 22, 24, 9, '#c9302a');
+    R(c, x + 9, y - 20, 8, 6, '#9fd0f2'); R(c, x + 19, y - 20, 8, 6, '#9fd0f2');
+    R(c, x, y - 14, 40, 2, '#e8564a');
+    R(c, x + 36, y - 11, 4, 3, '#ffe680');
+    [x + 9, x + 31].forEach(wx => { circ(c, wx, y - 4, 4, '#26262e'); circ(c, wx, y - 4, 2, '#b9c1cc'); });
+  }
+
   // ---------- マスコット（ヒヨコ隊長） ----------
   function drawMascot(c, t) {
     c.clearRect(0, 0, 32, 32);
@@ -1181,7 +1197,7 @@ window.PX = (() => {
 
   return {
     W, H, GROUND, R, circ, gridCanvas, installIcons, buildSprites, buildBackground, buildForeground,
-    BUILDINGS, roofYAt, drawTruck, drawMascot, get SPR() { return SPR; },
+    BUILDINGS, roofYAt, drawTruck, drawCar, drawMascot, get SPR() { return SPR; },
   };
 })();
 
@@ -1594,10 +1610,12 @@ window.PX = (() => {
   // ---------- 放水 ----------
   function emitWater(f, tx, ty, rate, power, dt, isPlayer) {
     f.acc = (f.acc || 0) + rate * dt;
-    const hx = f.x + f.dir * 13, hy = f.y - 13;
+    const hx = f.x + f.dir * 14, hy = f.y - 13;
+    f.stream = { hx, hy, dx: 0, dy: 0, t: S.t };
     let dx = tx - hx, dy = ty - hy;
     const d = Math.hypot(dx, dy) || 1;
     if (d > RANGE) { dx *= RANGE / d; dy *= RANGE / d; }
+    f.stream.dx = dx; f.stream.dy = dy;
     while (f.acc >= 1) {
       f.acc -= 1;
       const spread = 3 + Math.hypot(dx, dy) * 0.05;
@@ -1706,18 +1724,20 @@ window.PX = (() => {
     S.activeWalls.forEach(wl => drawWallShield(wl));
     // エンティティ（y順）
     const ents = [];
-    ents.push({ y: TRUCK.y - 2, d: () => { PX.drawTruck(ctx, TRUCK.x, TRUCK.y, S.t); drawHose(); } });
+    ents.push({ y: 211, d: () => PX.drawCar(ctx, -14, 214) });
+    ents.push({ y: TRUCK.y - 2, d: () => PX.drawTruck(ctx, TRUCK.x, TRUCK.y, S.t) });
+    ents.push({ y: 203.5, d: drawHoses });
     [[258, 219], [290, 220], [372, 218], [416, 221], [460, 219]].forEach(([x, y]) => ents.push({ y, d: () => ctx.drawImage(SPR.cone, x - 8, y - 18) }));
     S.crew.forEach(c => ents.push({ y: c.y, d: () => drawFF(c, SPR.ff) }));
     if (S.mode === 'play' || S.mode === 'modal' || S.mode === 'result') ents.push({ y: S.player.y + 0.1, d: () => drawFF(S.player, SPR.player, true) });
     S.activeWalls.forEach(wl => ents.push({ y: 214, d: () => drawBarricade(wl) }));
     ents.sort((a, b) => a.y - b.y).forEach(e => e.d());
     // 水
+    drawStreams();
     S.water.forEach(w => {
-      if (w.px !== undefined) R(ctx, (w.x + w.px) / 2 - 1, (w.y + w.py) / 2 - 1, 4, 4, '#6cc4ff');
-      R(ctx, w.x - 1, w.y - 1, w.s + 2, w.s + 2, '#8fd6ff');
+      if (w.t > w.T * 0.6) R(ctx, w.x - 1, w.y - 1, w.s + 2, w.s + 2, '#8fd6ff');
     });
-    S.water.forEach(w => { R(ctx, w.x, w.y, w.s, w.s, '#ffffff'); });
+    S.water.forEach(w => { if (w.t > w.T * 0.6) R(ctx, w.x, w.y, w.s, w.s, '#ffffff'); });
     S.particles.forEach(p => { ctx.globalAlpha = 1 - p.life / p.max; R(ctx, p.x, p.y, p.s, p.s, p.col); });
     ctx.globalAlpha = 1;
     ctx.drawImage(FG, 0, 0);
@@ -1737,18 +1757,22 @@ window.PX = (() => {
       }
     }
   }
+  const PUFFS = [[-0.42, -30, 15], [0.38, -32, 16], [-0.05, -46, 22], [-0.4, -64, 17], [0.36, -62, 20], [0.05, -84, 21], [0.55, -90, 15], [-0.3, -100, 16], [0.25, -116, 18], [0.6, -124, 13]];
   function drawSmokeMass(b) {
     const f = b.fire / 100;
-    if (f < 0.25) return;
-    const a = Math.min(1, (f - 0.25) / 0.4);
-    const t = S.t;
-    ctx.globalAlpha = 0.92 * a;
-    const blobs = [[-0.35, -38, 16], [0.05, -50, 20], [0.4, -40, 16], [0.2, -70, 18], [0.55, -72, 14], [-0.15, -78, 14], [0.4, -96, 12]];
-    blobs.forEach(([rx, dy, r], i) => {
-      const x = b.cx + rx * b.w + Math.sin(t * 0.8 + i) * 3 + (dy < -60 ? 10 : 0);
-      const y = b.top + dy * (0.6 + 0.4 * f) + Math.cos(t * 0.7 + i * 2) * 2;
-      circ(ctx, x, y, r * (0.6 + 0.4 * f) * (0.75 + 0.25 * b.w / 104), i % 3 === 0 ? '#3a3a42' : i % 3 === 1 ? '#2c2c33' : '#4a4a52');
-    });
+    if (f < 0.2) return;
+    const a = Math.min(1, (f - 0.2) / 0.4), t = S.t;
+    const scale = (0.55 + 0.45 * f) * (0.7 + 0.3 * b.w / 104);
+    const pts = PUFFS.map(([rx, dy, r], i) => ({
+      x: b.cx + rx * b.w + Math.sin(t * 0.6 + i * 1.3) * 3 + (-dy) * 0.12,
+      y: b.top + dy * (0.55 + 0.45 * f) + Math.cos(t * 0.5 + i * 2) * 2,
+      r: r * scale,
+    }));
+    ctx.globalAlpha = 0.96 * a;
+    pts.forEach(p => circ(ctx, p.x + 2, p.y + 3, p.r, '#25252b'));
+    pts.forEach(p => circ(ctx, p.x, p.y, p.r, '#3a3a42'));
+    pts.forEach(p => circ(ctx, p.x - p.r * 0.25, p.y - p.r * 0.3, p.r * 0.62, '#4d4d56'));
+    pts.forEach(p => circ(ctx, p.x - p.r * 0.4, p.y - p.r * 0.5, p.r * 0.28, '#62626b'));
     ctx.globalAlpha = 1;
   }
 
@@ -1772,6 +1796,13 @@ window.PX = (() => {
         tongue(x, GROUND + 1, h, 12, x);
       }
     }
+    // 側面の炎
+    if (f > 0.6) {
+      const wt = b.type === 'house' ? b.roofBase : b.top;
+      [b.x + 1, b.x + b.w - 1].forEach((sx, k) => {
+        for (let y = wt + 14; y < GROUND - 10; y += 22) tongue(sx, y + 10, (f - 0.6) * 55 * (0.7 + 0.3 * Math.sin(t * 8 + y + k)), 9, y + k * 3);
+      });
+    }
     // 屋根の炎
     const step = 8;
     for (let x = b.x - 2; x <= b.x + b.w + 2; x += step) {
@@ -1779,7 +1810,7 @@ window.PX = (() => {
       const ry = PX.roofYAt(b, clamp(x, b.x, b.x + b.w));
       const n = 0.5 + 0.25 * Math.sin(t * 6 + x * 0.9) + 0.25 * Math.sin(t * 4.1 + x * 0.37);
       const env = 0.5 + 0.5 * Math.sin(clamp(rel, 0, 1) * Math.PI);
-      const h = (10 + 62 * f) * (0.55 + 0.45 * n) * env;
+      const h = (12 + 76 * f) * (0.55 + 0.45 * n) * env;
       tongue(x, ry + 8, h, 15 + 6 * f, x * 0.7);
     }
   }
@@ -1801,16 +1832,16 @@ window.PX = (() => {
   function drawFF(c, set, isPlayer) {
     const frame = c.moving ? 1 + (Math.floor(c.walkT * 8) % 2) : 0;
     const img = set[frame][c.dir < 0 ? 1 : 0];
-    const x = Math.round(c.x - 12), y = Math.round(c.y - 32);
-    R(ctx, x + 2, c.y - 2, 20, 3, 'rgba(0,0,0,0.18)');
+    const x = Math.round(c.x - 14), y = Math.round(c.y - 36);
+    R(ctx, x + 3, c.y - 2, 22, 3, 'rgba(0,0,0,0.18)');
     ctx.drawImage(img, x, y);
     if (c.spraying || c.hose) {
-      const hx = c.x + c.dir * 10, hy = c.y - 9;
+      const hx = c.x + c.dir * 12, hy = c.y - 11;
       R(ctx, hx - 2, hy - 2, 5, 5, '#3a3a46');
       R(ctx, hx + c.dir * 3 - 1, hy - 4, 4, 4, '#c9cdd4');
     }
     if (isPlayer) {
-      const by = Math.round(c.y - 44 + Math.sin(S.t * 6) * 1.5);
+      const by = Math.round(c.y - 48 + Math.sin(S.t * 6) * 1.5);
       R(ctx, c.x - 4, by, 9, 3, '#141a28'); R(ctx, c.x - 3, by + 3, 7, 2, '#141a28'); R(ctx, c.x - 1, by + 5, 3, 2, '#141a28');
       R(ctx, c.x - 3, by + 1, 7, 2, '#3c90e6'); R(ctx, c.x - 2, by + 3, 5, 1, '#3c90e6'); R(ctx, c.x, by + 4, 1, 2, '#3c90e6');
       if (c.spraying) {
@@ -1825,8 +1856,42 @@ window.PX = (() => {
     }
   }
 
+  function drawHoses() {
+    const list = S.crew.filter(c => c.spraying || c.hose);
+    if (S.mode !== 'title' && S.player.spraying) list.push(S.player);
+    const ox = TRUCK.x + 100, oy = TRUCK.y - 4;
+    list.forEach(c => {
+      const ex = c.x - c.dir * 3, ey = c.y - 1;
+      const mx = (ox + ex) / 2, my = Math.max(oy, ey) + 6;
+      const n = Math.ceil(Math.abs(ex - ox) / 2) + 6;
+      for (let k = 0; k <= n; k++) {
+        const u = k / n, x = (1 - u) * (1 - u) * ox + 2 * u * (1 - u) * mx + u * u * ex, y = (1 - u) * (1 - u) * oy + 2 * u * (1 - u) * my + u * u * ey;
+        R(ctx, x, y + 2, 2, 1, '#9aa3ae'); R(ctx, x, y, 2, 2, '#f4f6f9');
+      }
+    });
+  }
+  function drawStreams() {
+    const list = S.crew.filter(c => c.spraying && c.stream && S.t - c.stream.t < 0.1);
+    if (S.player.spraying && S.player.stream && S.mode !== 'title') list.push(S.player);
+    const G = 160, arcs = [];
+    list.forEach((c, ci) => {
+      const { hx, hy, dx, dy } = c.stream;
+      const dist = Math.hypot(dx, dy); if (dist < 5) return;
+      const T = Math.max(0.18, dist / 230), vx = dx / T, vy = (dy - 0.5 * G * T * T) / T;
+      const pts = [];
+      for (let k = 0; k <= 22; k++) {
+        const u = k / 22, tt = u * T;
+        pts.push([hx + vx * tt, hy + vy * tt + 0.5 * G * tt * tt + Math.sin(S.t * 24 + u * 7 + ci) * u * 1.6, 1 + u * 2.6]);
+      }
+      arcs.push(pts);
+    });
+    arcs.forEach(pts => pts.forEach(([x, y, r]) => circ(ctx, x, y, r + 1, '#7cc8ff')));
+    arcs.forEach(pts => pts.forEach(([x, y, r], k) => { if (k > 1) circ(ctx, x, y, Math.max(1, r - 0.6), '#ffffff'); }));
+    arcs.forEach(pts => { const [x, y] = pts[pts.length - 1]; for (let i = 0; i < 4; i++) R(ctx, x + rand(-7, 7), y + rand(-6, 4), 2, 2, i % 2 ? '#ffffff' : '#bfe8ff'); });
+  }
+
   function drawHose() {
-    if (S.mode !== 'title') return;
+    return;
     const c = S.crew[0];
     const pts = [[TRUCK.x + 100, TRUCK.y - 14], [TRUCK.x + 102, TRUCK.y + 2], [c.x - 14, c.y - 2], [c.x - 10, c.y - 9]];
     for (let i = 0; i < pts.length - 1; i++) {

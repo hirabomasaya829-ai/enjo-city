@@ -245,27 +245,29 @@ window.PX = (() => {
   // ---------- スプライト ----------
   const FF_PAL = {
     k: '#2a1f2e', y: '#ffd21f', Y: '#e2a400', w: '#ffffff', h: '#2b1d1a', s: '#ffd9b8',
-    e: '#2a1f2e', p: '#ff9c9c', r: '#e2412b', R: '#a92d22', l: '#ffe066', g: '#3a3a46', b: '#3a2a2a',
+    e: '#2a1f2e', m: '#c0504a', p: '#ff9c9c', L: '#fff3a8', r: '#e2412b', R: '#a92d22', l: '#ffe066', g: '#3a3a46', b: '#3a2a2a',
   };
   const FF_HEAD = [
-    '...kkkkkk...',
-    '..kyyyyyyk..',
-    '.kyyyywwyyk.',
-    '.kyyyywwyyk.',
-    'kYyyyyyyyyYk',
-    'kkYYYYYYYYkk',
-    '.khhhhhhhhk.',
-    '.khhssssshk.',
-    '.khsesssesk.',
-    '.kspssssspk.',
-    '..kkrrrrkk..',
-    '.krrlrrlrrk.',
-    'kgrrrrrrrrgk',
-    '.kllllllllk.',
+    '....kkkkkk....',
+    '..kkyyyyyykk..',
+    '.kyyyyLyyyyyk.',
+    '.kyyyywwyyyyk.',
+    'kyyyywrrwyyyyk',
+    'kyyyyywwyyyyyk',
+    'kYYYYYYYYYYYYk',
+    '.khhhhhhhhhhk.',
+    '.khhsshhsshhk.',
+    '.khsssssssshk.',
+    '.kssessssessk.',
+    '.kpsessssespk.',
+    '..kkssmmsskk..',
+    '.krrrlrrlrrrk.',
+    'kgrrrlrrlrrrgk',
+    'kgllllllllllgk',
   ];
-  const FF_A = FF_HEAD.concat(['.kRRRkkRRRk.', '.kbbk..kbbk.']);
-  const FF_B = FF_HEAD.concat(['..kRRkkRRRk.', '..kbbk..kbbk']);
-  const FF_C = FF_HEAD.concat(['.kRRRkkRRk..', 'kbbk..kbbk..']);
+  const FF_A = FF_HEAD.concat(['.kRRRRkkRRRRk.', '.kbbbk..kbbbk.']);
+  const FF_B = FF_HEAD.concat(['..kRRRkkRRRRk.', '..kbbk..kbbbk.']);
+  const FF_C = FF_HEAD.concat(['.kRRRRkkRRRk..', '.kbbbk..kbbk..']);
   const PLAYER_PAL = Object.assign({}, FF_PAL, { y: '#ff5a4a', Y: '#c8322a', w: '#ffffff' });
 
   const CONE = [
@@ -471,6 +473,9 @@ window.PX = (() => {
       else if (b.type === 'shop') drawShop(c, b);
       else drawApt(c, b);
       drawSign(c, b);
+      const wt = b.type === 'house' ? b.roofBase : b.top;
+      R(c, b.x - 1, wt, 1, GROUND - wt, '#6b4a3a');
+      R(c, b.x + b.w, wt, 1, GROUND - wt, '#6b4a3a');
       b.cx = b.x + b.w / 2;
     });
     // 歩道
@@ -539,6 +544,17 @@ window.PX = (() => {
     [x + 20, x + 84].forEach(wx => { circ(c, wx, y - 6, 6, '#26262e'); circ(c, wx, y - 6, 3, '#b9c1cc'); R(c, wx - 1, y - 7, 2, 2, '#ffffff'); });
   }
 
+  // ---------- 赤い車（左端） ----------
+  function drawCar(c, x, y) {
+    R(c, x, y - 2, 40, 3, 'rgba(0,0,0,0.18)');
+    R(c, x, y - 14, 40, 10, '#c9302a');
+    R(c, x + 6, y - 22, 24, 9, '#c9302a');
+    R(c, x + 9, y - 20, 8, 6, '#9fd0f2'); R(c, x + 19, y - 20, 8, 6, '#9fd0f2');
+    R(c, x, y - 14, 40, 2, '#e8564a');
+    R(c, x + 36, y - 11, 4, 3, '#ffe680');
+    [x + 9, x + 31].forEach(wx => { circ(c, wx, y - 4, 4, '#26262e'); circ(c, wx, y - 4, 2, '#b9c1cc'); });
+  }
+
   // ---------- マスコット（ヒヨコ隊長） ----------
   function drawMascot(c, t) {
     c.clearRect(0, 0, 32, 32);
@@ -575,6 +591,6 @@ window.PX = (() => {
 
   return {
     W, H, GROUND, R, circ, gridCanvas, installIcons, buildSprites, buildBackground, buildForeground,
-    BUILDINGS, roofYAt, drawTruck, drawMascot, get SPR() { return SPR; },
+    BUILDINGS, roofYAt, drawTruck, drawCar, drawMascot, get SPR() { return SPR; },
   };
 })();
