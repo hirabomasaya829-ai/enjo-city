@@ -1,0 +1,2278 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>炎上市 — デマ消火ゲーム</title>
+  <meta name="description" content="遊びながら、デマの延焼を防ぎ、みんなの情報リテラシーを育てる社会貢献型Webゲーム">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --navy: #28324a;
+  --navy2: #1f2840;
+  --ink: #141a28;
+  --line: #ffffff;
+  --red: #e8433a;
+  --red-soft: #f06a6a;
+  --green: #23a050;
+  --blue: #3c90e6;
+  --cream: #fff8ec;
+  --text: #28324a;
+  --track: #c9d3df;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #0e1422; overflow: hidden; }
+body {
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
+  color: #fff;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+
+.game {
+  position: relative;
+  width: min(100vw, 177.78vh);
+  aspect-ratio: 16 / 9;
+  container-type: inline-size;
+  overflow: hidden;
+  background: #8ac8f4;
+  touch-action: none;
+}
+.game > * { font-size: 1.55cqw; }
+
+#scene {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  cursor: crosshair;
+}
+
+/* ---------- アイコン ---------- */
+.ico {
+  display: inline-block; width: 1em; height: 1.15em; vertical-align: -0.18em;
+  background: center / contain no-repeat;
+  image-rendering: pixelated; flex: none;
+}
+.ico.flame { background-image: var(--ico-flame); width: .95em; height: 1.15em; }
+.ico.drop { background-image: var(--ico-drop); width: .9em; height: 1.1em; }
+.ico.crown { background-image: var(--ico-crown); width: 1.45em; height: 1em; }
+.ico.heart { background-image: var(--ico-heart); width: 1.1em; height: 1em; }
+.ico.heartEmpty { background-image: var(--ico-heartEmpty); width: 1.1em; height: 1em; }
+.ico.heartGold { background-image: var(--ico-heartGold); width: 1.1em; height: 1em; }
+.ico.star { background-image: var(--ico-star); width: 1em; height: 1em; }
+.ico.search { background-image: var(--ico-search); width: 1.1em; height: 1.1em; }
+.ico.shield { background-image: var(--ico-shield); width: 1em; height: 1.1em; }
+.ico.check { background-image: var(--ico-check); width: 1.2em; height: .9em; }
+.ico.cross { background-image: var(--ico-cross); width: 1em; height: .9em; }
+.ico.book { background-image: var(--ico-book); width: 1.4em; height: .95em; }
+.ico.pad { background-image: var(--ico-pad); width: 1.6em; height: 1em; }
+.ico.bulb { background-image: var(--ico-bulb); width: 1.1em; height: 1em; }
+.ico.hands { background-image: var(--ico-hands); width: 1.6em; height: 1em; }
+.ico.target { background-image: var(--ico-target); width: 1.1em; height: 1.1em; }
+.ico.building { background-image: var(--ico-building); width: 1.3em; height: 1em; }
+
+/* ---------- ドット枠 ---------- */
+.px-box {
+  --b: .17em;
+  background: #fff; color: var(--text);
+  box-shadow:
+    0 calc(-1 * var(--b)) 0 0 var(--line), 0 var(--b) 0 0 var(--line),
+    calc(-1 * var(--b)) 0 0 0 var(--line), var(--b) 0 0 0 var(--line),
+    0 calc(-2 * var(--b)) 0 0 var(--ink), 0 calc(2 * var(--b)) 0 0 var(--ink),
+    calc(-2 * var(--b)) 0 0 0 var(--ink), calc(2 * var(--b)) 0 0 0 var(--ink),
+    calc(-1 * var(--b)) calc(-1 * var(--b)) 0 0 var(--ink), var(--b) calc(-1 * var(--b)) 0 0 var(--ink),
+    calc(-1 * var(--b)) var(--b) 0 0 var(--ink), var(--b) var(--b) 0 0 var(--ink),
+    0 calc(3 * var(--b)) 0 0 rgba(10, 16, 30, .35);
+}
+.px-box.dark { background: var(--navy); color: #fff; }
+
+/* ---------- HUD ---------- */
+.hud { position: absolute; inset: 0; pointer-events: none; }
+.hud button { pointer-events: auto; }
+
+.title-badge {
+  position: absolute; left: 1.1%; top: 1.3%; width: 19%; height: 9.7%;
+  background: var(--navy); border: .16em solid var(--ink); border-radius: .6em;
+  display: flex; align-items: center; justify-content: center; gap: .55em;
+  box-shadow: inset 0 0 0 .12em #3a4560, 0 .2em 0 rgba(10, 16, 30, .35);
+}
+.title-badge span { font-size: 2.4em; font-weight: 900; letter-spacing: .08em; line-height: 1; color: #fff; }
+.title-badge .ico { width: 1.75em; height: 2.1em; }
+
+.trend { position: absolute; left: 1.45%; top: 13.6%; width: 26.2%; transition: opacity .2s; }
+.trend-head {
+  background: var(--navy); color: #fff; font-weight: 800; font-size: 1.02em;
+  padding: .42em .65em .42em .75em; display: flex; justify-content: space-between; align-items: center;
+}
+.trend-head .x { font-size: 1.15em; line-height: 1; font-weight: 900; opacity: .9; }
+.trend-body { padding: .55em .85em .35em; }
+.trend.collapsed .trend-body { display: none; }
+.trend-top .row1 { display: flex; align-items: center; gap: .45em; font-size: 1.08em; font-weight: 900; white-space: nowrap; }
+.trend-top .row1 b { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
+.tag { font-weight: 900; font-size: .92em; display: inline-flex; align-items: center; gap: .2em; flex: none; }
+.tag.fire { color: var(--red); }
+.tag.out { color: var(--blue); }
+.tag.calm { color: var(--green); }
+.trend-top .row2 { margin-top: .35em; font-weight: 800; color: #6b7487; font-size: .98em; white-space: nowrap; }
+.trend-top .row2 b { color: var(--text); font-size: 1.08em; }
+.pct { color: var(--red); font-weight: 800; }
+.pct.out { color: var(--blue); }
+.chart { position: relative; margin: .3em 0 .2em; padding-left: 1.6em; height: 3.6em; border-bottom: 1px solid #e7ebf1; }
+.chart canvas { width: 100%; height: 100%; display: block; }
+.chart .ymax, .chart .ymin { position: absolute; left: 0; font-size: .6em; font-weight: 800; color: #8a93a5; }
+.chart .ymax { top: .3em; }
+.chart .ymin { bottom: .4em; color: var(--red); font-size: .75em; }
+.trend-rows .trow {
+  display: flex; justify-content: space-between; align-items: center; gap: .5em;
+  font-weight: 800; font-size: .95em; padding: .42em 0; border-top: .12em solid #e7ebf1; white-space: nowrap;
+}
+.trend-rows .trow span:first-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.trow .up { color: var(--green); font-weight: 900; }
+.trow .hot { color: var(--red); font-weight: 900; }
+.trow .done { color: var(--blue); font-weight: 900; }
+
+.town-label {
+  position: absolute; right: 1.1%; top: 1.9%;
+  background: var(--navy); border: .16em solid var(--ink); border-radius: .6em;
+  padding: .5em 1em; font-weight: 900; font-size: 1.12em; white-space: nowrap;
+  box-shadow: inset 0 0 0 .1em #3a4560, 0 .2em 0 rgba(10, 16, 30, .35);
+}
+.town-label small { font-size: .72em; font-weight: 800; }
+
+.status {
+  position: absolute; right: 1.6%; top: 11.4%; width: 15em; padding: .45em .7em;
+  font-weight: 800; font-size: .82em; display: none;
+}
+.hud.playing .status { display: block; }
+.status .hearts { display: flex; gap: .25em; margin-bottom: .3em; }
+.status .hearts .ico { width: 1.45em; height: 1.3em; }
+.status .srow { display: flex; justify-content: space-between; align-items: center; margin-top: .2em; white-space: nowrap; }
+.status b { color: #ffd21f; }
+.mini { background: #3d4966; border-radius: .3em; padding: .05em .55em; font-weight: 900; }
+
+/* 吹き出し */
+.bubble {
+  --b: .17em;
+  position: absolute; background: var(--navy); color: #fff; font-weight: 900;
+  padding: .55em .85em .6em; transform: translateX(-50%); white-space: nowrap;
+  box-shadow:
+    0 calc(-1 * var(--b)) 0 0 var(--line), 0 var(--b) 0 0 var(--line),
+    calc(-1 * var(--b)) 0 0 0 var(--line), var(--b) 0 0 0 var(--line),
+    0 calc(-2 * var(--b)) 0 0 var(--ink), 0 calc(2 * var(--b)) 0 0 var(--ink),
+    calc(-2 * var(--b)) 0 0 0 var(--ink), calc(2 * var(--b)) 0 0 0 var(--ink),
+    calc(-1 * var(--b)) calc(-1 * var(--b)) 0 0 var(--ink), var(--b) calc(-1 * var(--b)) 0 0 var(--ink),
+    calc(-1 * var(--b)) var(--b) 0 0 var(--ink), var(--b) var(--b) 0 0 var(--ink);
+  opacity: 0; transition: opacity .25s;
+}
+.bubble.show { opacity: 1; }
+.bubble::before, .bubble::after {
+  content: ''; position: absolute;
+  clip-path: polygon(0 0, 100% 0, 100% 25%, 75% 25%, 75% 50%, 50% 50%, 50% 75%, 25% 75%, 25% 100%, 0 100%);
+}
+.bubble::before { width: 1.9em; height: 1.55em; bottom: -1.55em; margin-left: -.34em; background: var(--line); }
+.bubble::after { width: 1.35em; height: 1.1em; bottom: -1.1em; background: var(--navy); }
+.bubble::before { box-shadow: none; }
+.bubble.heat::before { left: 18%; }
+.bubble .bt { font-size: 1.12em; display: flex; align-items: center; gap: .3em; }
+.bubble.heat::after { left: 18%; }
+.bubble.heat { padding-right: 1em; }
+.bubble.heat .flames { display: inline-flex; gap: .12em; margin-left: .2em; }
+.bubble.heat .flames .ico { width: 1.05em; height: 1.25em; }
+.bubble.cool { background: #fff; color: var(--text); transform: none; }
+.bubble.cool::after { left: .9em; background: #fff; }
+.bubble.cool::before { left: .9em; background: var(--ink); }
+.bubble.cool { box-shadow:
+    0 calc(-1 * var(--b)) 0 0 #e3ebf6, 0 var(--b) 0 0 #e3ebf6,
+    calc(-1 * var(--b)) 0 0 0 #e3ebf6, var(--b) 0 0 0 #e3ebf6,
+    0 calc(-2 * var(--b)) 0 0 var(--ink), 0 calc(2 * var(--b)) 0 0 var(--ink),
+    calc(-2 * var(--b)) 0 0 0 var(--ink), calc(2 * var(--b)) 0 0 0 var(--ink),
+    calc(-1 * var(--b)) calc(-1 * var(--b)) 0 0 var(--ink), var(--b) calc(-1 * var(--b)) 0 0 var(--ink),
+    calc(-1 * var(--b)) var(--b) 0 0 var(--ink), var(--b) var(--b) 0 0 var(--ink); }
+.bubble.cool .bt { font-size: 1.25em; }
+.bubble.cool .bt b { margin-left: .5em; }
+.bar { margin-top: .45em; height: .85em; border-radius: .2em; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 50%; border-radius: .2em; transition: width .2s; }
+.bar.red { background: #3a4558; width: 11.5em; }
+.bar.red i { background: linear-gradient(#ff8a8a 0 35%, var(--red-soft) 35%); }
+.bar.blue { background: var(--track); width: 11.6em; }
+.bar.blue i { background: linear-gradient(#7cc0ff 0 35%, var(--blue) 35%); }
+
+/* アナウンス */
+.announcer {
+  position: absolute; left: 12.7%; width: 74.2%; top: 83.3%; height: 11.1%;
+  display: flex; align-items: center; padding-left: 9.5%;
+}
+.announcer canvas {
+  position: absolute; left: -1%; bottom: -14%; height: 150%; aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+.announcer .msg { display: flex; align-items: center; gap: .45em; font-weight: 900; font-size: 1.95em; letter-spacing: .04em; white-space: nowrap; overflow: hidden; }
+.announcer .msg .ico { width: .9em; height: 1.1em; }
+.announcer .msg span { overflow: hidden; text-overflow: ellipsis; }
+.announcer.flash .msg { animation: pop .35s ease-out; }
+@keyframes pop { 0% { transform: scale(.92); opacity: .4 } 100% { transform: none; opacity: 1 } }
+
+/* 操作ボタン */
+.actions { position: absolute; right: 1%; top: 81.5%; display: none; flex-direction: column; gap: .45em; width: 10.5%; }
+.hud.playing .actions { display: flex; }
+.act {
+  display: flex; align-items: center; justify-content: center; gap: .25em;
+  background: #fff; color: var(--text); font-weight: 900; font-size: .78em;
+  border: .18em solid var(--ink); border-radius: .5em; padding: .3em .2em;
+  box-shadow: 0 .22em 0 var(--ink);
+}
+.act:active { transform: translateY(.15em); box-shadow: 0 .07em 0 var(--ink); }
+.act[disabled] { opacity: .45; cursor: default; }
+.act kbd { font: inherit; font-size: .8em; background: #e3e8f0; border-radius: .25em; padding: 0 .3em; }
+
+/* 看板 */
+.signs { position: absolute; inset: 0; pointer-events: none; }
+.sign {
+  position: absolute; display: flex; align-items: center; justify-content: center;
+  color: #d23a3a; font-weight: 900; white-space: nowrap; overflow: hidden; letter-spacing: .02em;
+  pointer-events: auto; cursor: pointer; line-height: 1;
+}
+.sign.idle { color: #8a6a5c; cursor: default; pointer-events: none; }
+.sign.debunked { color: #2d7fd6; }
+.sign.burning::after {
+  content: '調査'; position: absolute; right: 0; top: 0; font-size: .55em; background: #ffd21f; color: var(--ink);
+  padding: .05em .2em; border-radius: 0 0 0 .3em; opacity: .9;
+}
+.sign.done::after { content: none; }
+
+/* スタート */
+.start-dock { position: absolute; left: 37.5%; top: 9.5%; transform: translate(-50%, -50%); display: flex; gap: .8em; align-items: center; }
+.hud.playing .start-dock { display: none; }
+.big-btn {
+  background: linear-gradient(#ff8a3a, #e8433a); color: #fff; font-weight: 900; font-size: 1.4em;
+  padding: .35em 1.1em; border: .14em solid var(--ink); border-radius: .5em;
+  box-shadow: inset 0 .12em 0 rgba(255, 255, 255, .45), 0 .2em 0 var(--ink); text-shadow: 0 .08em 0 rgba(0, 0, 0, .35);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.sub-btn {
+  background: #fff; color: var(--text); font-weight: 900; font-size: 1.05em; padding: .45em .9em;
+  border: .18em solid var(--ink); border-radius: .5em; box-shadow: 0 .22em 0 var(--ink);
+}
+@keyframes pulse { 50% { transform: scale(1.05); } }
+
+.wave-banner {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%) scale(.6);
+  background: var(--navy); border: .2em solid #fff; outline: .2em solid var(--ink);
+  font-weight: 900; font-size: 2.6em; padding: .3em 1.2em; border-radius: .3em; white-space: nowrap;
+  opacity: 0; transition: opacity .3s, transform .3s; text-align: center;
+}
+.wave-banner small { display: block; font-size: .42em; color: #ffd21f; margin-top: .2em; }
+.wave-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+.toast {
+  position: absolute; left: 50%; top: 24%; transform: translateX(-50%);
+  font-weight: 900; font-size: 1.2em; color: #fff; padding: .25em .8em; border-radius: .4em;
+  background: rgba(20, 26, 40, .85); opacity: 0; transition: opacity .25s; white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ---------- モーダル ---------- */
+.overlay {
+  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+  background: rgba(14, 20, 34, .55);
+}
+.overlay.show { display: flex; }
+.modal { width: 74%; max-height: 94%; overflow: auto; padding: .9em 1.2em 1em; font-size: .92em; color: var(--text); background: var(--cream); }
+.modal.wide { width: 86%; }
+.mhead {
+  display: inline-flex; align-items: center; gap: .45em; background: var(--navy); color: #fff;
+  font-weight: 900; font-size: 1.3em; padding: .3em .9em .3em .7em; border-radius: .4em; margin-bottom: .6em;
+}
+.mhead .ico { width: 1.2em; height: 1.2em; }
+.modal p.lead { font-weight: 700; font-size: .95em; margin-bottom: .6em; }
+.mbtns { display: flex; justify-content: center; gap: .8em; margin-top: .9em; }
+.btn {
+  background: var(--navy); color: #fff; font-weight: 900; font-size: 1.05em; padding: .45em 1.4em;
+  border: .16em solid var(--ink); border-radius: .5em; box-shadow: 0 .2em 0 var(--ink);
+}
+.btn.orange { background: linear-gradient(#ff8a3a, #e8433a); }
+.btn.light { background: #fff; color: var(--text); }
+.btn[disabled] { opacity: .4; cursor: default; }
+
+/* SNS投稿 */
+.inv-grid { display: grid; grid-template-columns: 1fr 13em; gap: 1em; }
+.post { background: #fff; border: .14em solid #d5dbe5; border-radius: .6em; padding: .7em .9em; }
+.post .who { display: flex; align-items: center; gap: .5em; font-weight: 900; font-size: .9em; }
+.post .who small { color: #8a93a5; font-weight: 700; }
+.avatar { width: 2em; height: 2em; border-radius: 50%; background: #ffd9b8; border: .12em solid var(--ink); display: grid; place-items: center; font-size: .9em; }
+.post .body { font-weight: 700; margin: .5em 0 .4em; line-height: 1.55; }
+.post .meta { font-size: .78em; color: #8a93a5; font-weight: 800; display: flex; gap: 1.2em; }
+.claims { margin-top: .7em; display: flex; flex-direction: column; gap: .45em; }
+.claim { background: #fff; border: .14em solid #d5dbe5; border-radius: .5em; padding: .4em .6em; display: grid; grid-template-columns: 1fr 13em; gap: .3em .6em; align-items: center; }
+.claim .ct { font-weight: 800; font-size: .92em; display: flex; gap: .4em; align-items: center; }
+.claim .opts { display: flex; gap: .3em; }
+.claim .why { grid-column: 1 / -1; }
+.opt {
+  flex: 1; border: .14em solid #b9c2d1; border-radius: .4em; padding: .2em .3em; font-weight: 900; font-size: .9em;
+  background: #f4f6fa; color: var(--text);
+}
+.opt.sel { background: var(--navy); color: #fff; border-color: var(--ink); }
+.opt.right { background: var(--green); color: #fff; border-color: #146b33; }
+.opt.wrong { background: var(--red); color: #fff; border-color: #a52a22; }
+.claim .why { margin-top: 0; font-size: .82em; font-weight: 700; color: #4b5568; display: none; }
+.claim.judged .why { display: block; }
+.side-card { background: #fff; border: .14em solid #d5dbe5; border-radius: .6em; padding: .7em .8em; font-weight: 800; font-size: .88em; }
+.side-card h4 { font-size: 1em; margin-bottom: .4em; display: flex; align-items: center; gap: .3em; }
+.side-card li { list-style: none; display: flex; align-items: center; gap: .4em; margin: .35em 0; }
+.legend { margin-top: .6em; }
+.legend div { margin: .35em 0; line-height: 1.35; }
+.legend b { display: inline-block; background: var(--navy); color: #fff; border-radius: .3em; padding: 0 .35em; margin-right: .3em; }
+.result-line { margin-top: .6em; font-weight: 900; font-size: 1.05em; text-align: center; }
+
+/* クイズ */
+.quiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em; align-items: center; }
+.quiz-card { background: #fff; border: .16em solid var(--navy); border-radius: .6em; padding: .8em 1em; }
+.quiz-card .qh { display: flex; align-items: center; gap: .4em; font-weight: 900; margin-bottom: .5em; }
+.quiz-card .q { font-weight: 800; font-size: 1.08em; line-height: 1.5; margin-bottom: .6em; }
+.qopt {
+  display: flex; align-items: center; gap: .5em; width: 100%; text-align: left;
+  border: .14em solid #b9c2d1; border-radius: .45em; padding: .4em .6em; margin: .35em 0; font-weight: 800; background: #f8f9fc; color: var(--text);
+}
+.qopt .dot { width: 1.05em; height: 1.05em; border-radius: 50%; border: .15em solid #8a93a5; flex: none; display: grid; place-items: center; }
+.qopt.right { background: #e5f7ea; border-color: var(--green); }
+.qopt.right .dot { border-color: var(--green); background: var(--green); }
+.qopt.wrong { background: #fde8e7; border-color: var(--red); }
+.qfeed { text-align: center; opacity: 0; transition: opacity .3s; }
+.qfeed.show { opacity: 1; }
+.qfeed .badge { display: inline-block; font-weight: 900; font-size: 1.8em; color: #fff; padding: .1em .8em; border-radius: .35em; border: .12em solid var(--ink); }
+.qfeed .badge.ok { background: var(--green); }
+.qfeed .badge.ng { background: var(--red); }
+.qfeed .box { margin-top: .6em; background: #fff; border: .16em solid var(--navy); border-radius: .6em; padding: .8em; }
+.qfeed .box b { display: block; font-size: 1.15em; margin-bottom: .3em; }
+.qfeed .box span { font-weight: 700; font-size: .92em; }
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6em; margin-top: .9em; }
+.three > div { background: #fff; border: .14em solid #d5dbe5; border-radius: .5em; padding: .5em; text-align: center; font-weight: 900; }
+.three small { display: block; font-weight: 700; color: #6b7487; font-size: .78em; }
+.three .stars { color: #ffb21f; letter-spacing: .1em; }
+
+/* 遊び方 */
+.how-row { display: grid; grid-template-columns: 4em 1fr; gap: .8em; align-items: center; background: #fff; border: .14em solid #d5dbe5; border-radius: .6em; padding: .55em .8em; margin: .45em 0; }
+.how-row .big { width: 3.4em; height: 3.4em; justify-self: center; }
+.how-row h3 { display: inline-flex; align-items: center; gap: .3em; background: var(--navy); color: #fff; font-size: 1em; padding: .15em .7em; border-radius: .35em; margin-bottom: .25em; }
+.how-row p { font-weight: 700; font-size: .9em; line-height: 1.5; }
+.keys { font-weight: 800; font-size: .85em; color: #4b5568; margin-top: .5em; line-height: 1.6; }
+.keys kbd { font: inherit; background: var(--navy); color: #fff; border-radius: .25em; padding: 0 .35em; }
+
+/* 結果 */
+.res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9em; }
+.res-card { background: #fff; border: .14em solid #d5dbe5; border-radius: .6em; padding: .6em .8em; }
+.res-card h4 { display: inline-flex; align-items: center; gap: .35em; background: var(--navy); color: #fff; padding: .15em .7em; border-radius: .35em; margin-bottom: .45em; font-size: .95em; }
+.stat-table { display: grid; grid-template-columns: 1fr 1fr; gap: .35em; }
+.stat-table > div { border: .12em solid #d5dbe5; border-radius: .35em; padding: .25em .5em; font-weight: 800; font-size: .85em; display: flex; justify-content: space-between; align-items: baseline; }
+.stat-table b { color: var(--red); font-size: 1.35em; }
+.stat-table b small { font-size: .55em; }
+.checks li { list-style: none; display: flex; gap: .4em; align-items: center; font-weight: 800; font-size: .88em; margin: .3em 0; padding-bottom: .25em; border-bottom: .1em dashed #e1e6ee; }
+.res-title { font-size: 1.8em; font-weight: 900; text-align: center; margin-bottom: .3em; }
+.res-title.ok { color: var(--red); }
+.res-title.ng { color: var(--navy); }
+.res-sub { text-align: center; font-weight: 800; margin-bottom: .6em; }
+
+@media (max-aspect-ratio: 1/1) {
+  .game::after {
+    content: '横向きにするとプレイしやすいよ'; position: absolute; left: 50%; top: 2%; transform: translateX(-50%);
+    font-size: 3cqw; font-weight: 900; color: #fff; background: rgba(20, 26, 40, .8); padding: .2em .6em; border-radius: .4em; pointer-events: none;
+  }
+}
+
+</style>
+</head>
+<body>
+  <div id="game" class="game">
+    <canvas id="scene" width="480" height="270"></canvas>
+    <div id="signs" class="signs"></div>
+
+    <div id="hud" class="hud">
+      <div class="title-badge"><i class="ico flame"></i><span>炎上市</span></div>
+
+      <div class="trend px-box" id="trend">
+        <div class="trend-head"><span>いま話題のトピック</span><button class="x" id="trendToggle" aria-label="たたむ">✕</button></div>
+        <div class="trend-body" id="trendBody">
+          <div class="trend-top">
+            <div class="row1"><i class="ico crown"></i><b id="tTopName">#〇〇の発言</b><span id="tTopTag" class="tag fire">炎上中<i class="ico flame"></i></span></div>
+            <div class="row2">投稿数　<b id="tTopCount">0</b> <span id="tTopPct" class="pct">(↑+0%)</span></div>
+            <div class="chart">
+              <span class="ymax" id="yMax">0</span><span class="ymin" id="yMin">0</span>
+              <canvas id="spark" width="240" height="56"></canvas>
+            </div>
+          </div>
+          <div class="trend-rows" id="tRows"></div>
+        </div>
+      </div>
+
+      <div class="town-label">街のようす <small>‹リアルタイム›</small></div>
+      <div class="status px-box dark" id="status">
+        <div class="hearts" id="hearts"></div>
+        <div class="srow"><span id="waveName">待機中</span><span>SCORE <b id="score">0</b></span></div>
+        <div class="srow"><span><i class="ico shield"></i> 防火壁 ×<b id="wallCount">0</b></span><button class="mini" id="pauseBtn">Ⅱ</button></div>
+      </div>
+
+      <div class="bubble heat" id="heat">
+        <div class="bt">炎上度 <span class="flames" id="heatIcons"></span></div>
+        <div class="bar red"><i id="heatBar"></i></div>
+      </div>
+      <div class="bubble cool" id="cool">
+        <div class="bt"><i class="ico drop"></i> 鎮火中… <b id="coolPct">0%</b></div>
+        <div class="bar blue"><i id="coolBar"></i></div>
+      </div>
+
+      <div class="announcer px-box dark" id="announcer">
+        <canvas id="mascot" width="32" height="32"></canvas>
+        <div class="msg"><i class="ico flame"></i><span id="annText">話題が急増！　消防隊が出動しました！</span></div>
+      </div>
+
+      <div class="actions" id="actions">
+        <button class="act" id="btnInvestigate"><i class="ico search"></i><span>火元調査</span><kbd>E</kbd></button>
+        <button class="act" id="btnWall"><i class="ico shield"></i><span>防火壁</span><kbd>F</kbd></button>
+      </div>
+
+      <div class="start-dock" id="startDock">
+        <button class="big-btn" id="startBtn">▶ 出動する！</button>
+        <button class="sub-btn" id="howBtn">？ 遊び方</button>
+      </div>
+
+      <div class="wave-banner" id="waveBanner"></div>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div id="overlay" class="overlay"></div>
+  </div>
+
+  <script>
+// 炎上市 — ゲームデータ（デマの話題・防火訓練クイズ）
+// 登場する人物・団体・出来事はすべて架空です。
+'use strict';
+
+// 火元調査で使うラベル
+window.LABELS = [
+  { key: '事実', desc: '公式発表や一次情報で確かめられる' },
+  { key: '推測', desc: '予想・思い込み・意見' },
+  { key: '不明', desc: '根拠がなく、まだ確認できない' },
+];
+
+// 炎上（デマ）の話題
+window.TOPICS = [
+  {
+    id: 'hatsugen', tag: '#〇〇の発言', user: 'うわさ速報', handle: '@uwasa_sokuho',
+    post: 'タレント〇〇が番組で「△△なんて不要」と発言！ひどすぎる。きっと前から嫌ってたんだ。',
+    claims: [
+      { text: '番組でその発言があった（公式の見逃し配信で確認できる）', ans: '事実', why: '公式の配信という一次情報で確認できます。' },
+      { text: '〇〇は前から△△を嫌っていた', ans: '推測', why: '投稿者の思い込みです。本人がそう言ったわけではありません。' },
+      { text: '切り取りではなく本心からの発言だ', ans: '不明', why: '発言の前後の文脈がまだ確認できていません。' },
+    ],
+  },
+  {
+    id: 'jiko', tag: '#駅前で大事故', user: 'ニュースまとめ部', handle: '@matome_bu',
+    post: '【拡散希望】〇〇線が止まってる！駅前で大事故があったらしい。今日中に復旧するのは絶対ムリ。',
+    claims: [
+      { text: '〇〇線が運転を見合わせている（鉄道会社の公式サイトに掲載）', ans: '事実', why: '鉄道会社の公式発表で確かめられます。' },
+      { text: '原因は駅前の大事故だ', ans: '不明', why: '「らしい」という伝聞で、出典がありません。' },
+      { text: '今日中の復旧は絶対にムリ', ans: '推測', why: '投稿者の予想です。根拠は示されていません。' },
+    ],
+  },
+  {
+    id: 'mizu', tag: '#水道水が危険', user: 'くらしの裏ワザ', handle: '@urawaza_life',
+    post: '水道水に有害物質が入ってるって！最近お腹をこわす人が多いのはそのせいだよ。みんな飲まないで！',
+    claims: [
+      { text: '市の水道局は水質検査の結果を公開している', ans: '事実', why: '公式サイトで誰でも確認できる一次情報です。' },
+      { text: '水道水に有害物質が入っている', ans: '不明', why: '検査結果などの出典が一切示されていません。' },
+      { text: 'お腹をこわす人が多いのは水道水のせいだ', ans: '推測', why: '2つの出来事を勝手に結びつけた思い込みです。' },
+    ],
+  },
+  {
+    id: 'game', tag: '#新作ゲーム延期', user: 'ゲーム情報局(非公式)', handle: '@game_joho',
+    post: '新作ゲームの発売延期が決定！公式が「続報は来週」としか言わないのが証拠。開発がヤバいに違いない。',
+    claims: [
+      { text: '公式アカウントが「続報は来週」と投稿した', ans: '事実', why: '公式アカウントの投稿という一次情報です。' },
+      { text: '発売延期が決定した', ans: '不明', why: '公式はそう発表していません。まだ確認できない情報です。' },
+      { text: '開発がうまくいっていない', ans: '推測', why: '「違いない」は投稿者の想像です。' },
+    ],
+  },
+  {
+    id: 'yogen', tag: '#来週大地震', user: '予言ニキ', handle: '@yogen_niki',
+    post: '来週の水曜に大地震が来る！あの人の予言はよく当たるから間違いない。今すぐ拡散して！',
+    claims: [
+      { text: '地震の日時を正確に予知することはできない（気象庁が説明）', ans: '事実', why: '公的機関が公式に説明している内容です。' },
+      { text: '来週の水曜に大地震が起きる', ans: '不明', why: '科学的な根拠や出典がありません。' },
+      { text: 'あの人の予言はよく当たる', ans: '推測', why: '当たった例だけを覚えている思い込みかもしれません。' },
+    ],
+  },
+  {
+    id: 'shinagire', tag: '#スーパーで品切れ', user: '買いだめ注意報', handle: '@kaidame',
+    post: 'トイレットペーパーが売り切れ！原料が輸入できなくなったらしい。今買わないと手に入らなくなるよ！',
+    claims: [
+      { text: '近所の店で一時的に売り切れた（店の告知あり）', ans: '事実', why: 'お店の告知で確認できる情報です。' },
+      { text: '原料が輸入できなくなった', ans: '不明', why: '「らしい」という伝聞で、メーカーの発表はありません。' },
+      { text: '今買わないと手に入らなくなる', ans: '推測', why: '不安からくる予想です。買いだめがかえって品切れを広げます。' },
+    ],
+  },
+  {
+    id: 'collab', tag: '#〇〇コラボ中止', user: 'エンタメ裏ニュース', handle: '@ura_news',
+    post: '〇〇コラボの公式ページが消えてる！中止決定だね。炎上したのが原因に決まってる。',
+    claims: [
+      { text: 'コラボの公式ページが一時的に表示されない', ans: '事実', why: '実際にページを開いて確かめられる事実です。' },
+      { text: 'コラボの中止が決定した', ans: '不明', why: '公式の発表がなく、まだ確認できません（メンテナンス中かも）。' },
+      { text: '中止の原因は炎上だ', ans: '推測', why: '「決まってる」は投稿者の決めつけです。' },
+    ],
+  },
+  {
+    id: 'kuma', tag: '#小学校にクマ', user: 'まちの噂', handle: '@machi_uwasa',
+    post: 'クマが小学校に侵入したって！市のサイトにも出没情報あるし本当だよ。今年は特に危ないかも…',
+    claims: [
+      { text: '市の公式サイトにクマの目撃情報が掲載されている', ans: '事実', why: '公式サイトで確認できる一次情報です。' },
+      { text: 'クマが小学校に侵入した', ans: '不明', why: '市の情報は「目撃」だけ。侵入したという出典はありません。' },
+      { text: '今年は特にクマが危ない', ans: '推測', why: '投稿者の感想で、データは示されていません。' },
+    ],
+  },
+];
+
+// 炎上していない、ふつうの話題（ランキングの埋め草）
+window.NEUTRAL_TOPICS = [
+  { tag: '#新作ゲーム 発売', pct: 180 },
+  { tag: '#〇〇コラボ', pct: 65 },
+  { tag: '#週末の天気', pct: 42 },
+  { tag: '#今日のおやつ', pct: 28 },
+];
+
+// 防火訓練クイズ（answer は options の添字）
+window.QUIZZES = [
+  {
+    q: '「有名人が逮捕された！」という投稿が拡散。まずどうする？',
+    options: ['すぐにリポストする', 'デマだと決めつける', '判断を保留して根拠を確認する'],
+    answer: 2,
+    head: 'まずは出典や一次情報を確認！',
+    why: '拡散前に調べることで、デマの延焼を防げます。',
+  },
+  {
+    q: '次のうち「一次情報」にあたるのはどれ？',
+    options: ['まとめサイトの記事', '発表した本人・機関の公式発表', '友だちから聞いた話'],
+    answer: 1,
+    head: '公式の発表が一次情報！',
+    why: 'まとめや伝聞は、途中で内容が変わっていることがあります。',
+  },
+  {
+    q: '災害のとき「動物園からライオンが逃げた」という画像つき投稿。どうする？',
+    options: ['画像があるから本物だと判断', 'いつ・どこで撮られた画像か確かめる', '心配なので急いで拡散する'],
+    answer: 1,
+    head: '画像の出どころを確認！',
+    why: '昔の画像や別の場所の画像が使い回されることがあります。',
+  },
+  {
+    q: '自分と違う意見の投稿を見つけた。どうする？',
+    options: ['すぐに強い言葉で反論する', '相手の根拠や背景を一度読んでみる', 'ブロックして二度と見ない'],
+    answer: 1,
+    head: 'まずは相手の考えを知ろう！',
+    why: '多様な意見を理解することが、冷静な判断につながります。',
+  },
+  {
+    q: '「拡散希望」と書かれた、善意っぽい投稿。どうする？',
+    options: ['善意だからそのまま拡散', '日付や出典を確かめてから判断', '内容を少し盛って拡散'],
+    answer: 1,
+    head: '善意の拡散でもまず確認！',
+    why: '古い情報や誤りが、善意で一気に広がることがあります。',
+  },
+  {
+    q: '間違った情報を拡散してしまったと気づいたら？',
+    options: ['だまって削除する', '訂正の投稿をして誤りを伝える', 'そのままにしておく'],
+    answer: 1,
+    head: '訂正して火を消そう！',
+    why: '訂正を伝えることで、広がったデマの延焼を止められます。',
+  },
+  {
+    q: '見出しだけで驚いたニュース記事。どうする？',
+    options: ['見出しだけでシェアする', '本文と出典を読んでから判断する', 'コメント欄の反応で判断する'],
+    answer: 1,
+    head: '本文まで読んでから！',
+    why: '見出しは注目を集めるため、大げさに書かれることがあります。',
+  },
+  {
+    q: '「専門家によると〜」という投稿。まず確かめるべきは？',
+    options: ['その専門家が誰で、本当にそう言ったか', 'いいねの数', '投稿者のフォロワー数'],
+    answer: 0,
+    head: '誰が言ったのかを確認！',
+    why: 'いいねやフォロワーの数は、情報の正しさとは関係ありません。',
+  },
+];
+
+</script>
+  <script>
+// 炎上市 — ピクセルアート描画ヘルパー・スプライト・背景
+'use strict';
+
+window.PX = (() => {
+  const W = 480, H = 270, GROUND = 198;
+
+  // ---------- 基本図形 ----------
+  function R(c, x, y, w, h, col) {
+    if (w <= 0 || h <= 0) return;
+    c.fillStyle = col;
+    c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  }
+  // ドット絵っぽい塗りつぶし円
+  function circ(c, cx, cy, r, col) {
+    c.fillStyle = col;
+    r = Math.max(1, Math.round(r));
+    cx = Math.round(cx); cy = Math.round(cy);
+    for (let dy = -r; dy <= r; dy++) {
+      const dx = Math.floor(Math.sqrt(r * r - dy * dy + r * 0.6));
+      c.fillRect(cx - dx, cy + dy, dx * 2 + 1, 1);
+    }
+  }
+
+  // 文字列グリッド → canvas
+  function gridCanvas(grid, pal, scale = 1) {
+    const h = grid.length, w = grid[0].length;
+    const cv = document.createElement('canvas');
+    cv.width = w * scale; cv.height = h * scale;
+    const c = cv.getContext('2d');
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const ch = grid[y][x];
+      if (ch === '.' || !pal[ch]) continue;
+      c.fillStyle = pal[ch];
+      c.fillRect(x * scale, y * scale, scale, scale);
+    }
+    return cv;
+  }
+  function flipped(cv) {
+    const f = document.createElement('canvas');
+    f.width = cv.width; f.height = cv.height;
+    const c = f.getContext('2d');
+    c.translate(cv.width, 0); c.scale(-1, 1); c.drawImage(cv, 0, 0);
+    return f;
+  }
+  // 文字列グリッド → SVG data URI（HUD アイコン用）
+  function gridSVG(grid, pal) {
+    const h = grid.length, w = grid[0].length;
+    let rects = '';
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const ch = grid[y][x];
+      if (ch === '.' || !pal[ch]) continue;
+      rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`;
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
+    return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+  }
+
+  // ---------- HUD アイコン ----------
+  const ICONS = {
+    flame: [[
+      '....r.....',
+      '....rr....',
+      '...rrr....',
+      '...roor...',
+      '..rroor.r.',
+      '.rrooyorr.',
+      '.rooyyyorr',
+      'rroyyyyyor',
+      'royyywyyor',
+      'royyyyyyor',
+      '.royyyyor.',
+      '..rrrrrr..',
+    ], { r: '#e8321e', o: '#ff8a1f', y: '#ffd84a', w: '#fff6c8' }],
+    drop: [[
+      '....b.....',
+      '...bbb....',
+      '...bbb....',
+      '..bLbbb...',
+      '..bLbbb...',
+      '.bLbbbbb..',
+      '.bLbbbbbb.',
+      'bLbbbbbbbb',
+      'bbbbbbbbDb',
+      'bbbbbbbbDb',
+      '.bbbbbbDb.',
+      '..bbbbbb..',
+    ], { b: '#3b9cf0', L: '#c9ecff', D: '#1f6fc4' }],
+    crown: [[
+      'y....y....y',
+      'yy..yyy..yy',
+      'yyy.yyy.yyy',
+      'yyyyyyyyyyy',
+      'yyrrryBByyy',
+      'yyyyyyyyyyy',
+      'OOOOOOOOOOO',
+    ], { y: '#ffc21f', O: '#d98500', r: '#e8433a', B: '#3c90e6' }],
+    heart: [[
+      '.kk...kk.',
+      'krrk.krrk',
+      'krwrkrrrk',
+      'krrrrrrrk',
+      '.krrrrrk.',
+      '..krrrk..',
+      '...krk...',
+      '....k....',
+    ], { k: '#1b2333', r: '#ff4d5e', w: '#ffd0d6' }],
+    heartGold: [[
+      '.kk...kk.',
+      'krrk.krrk',
+      'krwrkrrrk',
+      'krrrrrrrk',
+      '.krrrrrk.',
+      '..krrrk..',
+      '...krk...',
+      '....k....',
+    ], { k: '#1b2333', r: '#ffc21f', w: '#fff3b0' }],
+    heartEmpty: [[
+      '.kk...kk.',
+      'krrk.krrk',
+      'krrrkrrrk',
+      'krrrrrrrk',
+      '.krrrrrk.',
+      '..krrrk..',
+      '...krk...',
+      '....k....',
+    ], { k: '#1b2333', r: '#8d97a8' }],
+    star: [[
+      '....k....',
+      '....k....',
+      '...kwk...',
+      'kkkkwkkkk',
+      '.kwwwwwk.',
+      '..kwwwk..',
+      '..kwkwk..',
+      '.kwk.kwk.',
+      '.kk...kk.',
+    ], { k: '#d6dbe4', w: '#28324a' }],
+    search: [[
+      '..kkkk....',
+      '.kLLbbk...',
+      'kLbbbbbk..',
+      'kbbbbbbk..',
+      'kbbbbbbk..',
+      '.kbbbbk...',
+      '..kkkkoo..',
+      '......ooo.',
+      '.......ooo',
+      '........oo',
+    ], { k: '#28324a', L: '#ffffff', b: '#8fd0ff', o: '#c07a2c' }],
+    shield: [[
+      'kkkkkkkkk',
+      'kgggggGGk',
+      'kgLggggGk',
+      'kgLgggwGk',
+      'kggggwgGk',
+      'kgwgwggGk',
+      '.kgwggGk.',
+      '..kgggk..',
+      '...kgk...',
+      '....k....',
+    ], { k: '#1b5e34', g: '#34b45c', G: '#24884a', L: '#9ff0b8', w: '#ffffff' }],
+    check: [[
+      '........gg',
+      '.......ggg',
+      'gg....ggg.',
+      'ggg..ggg..',
+      '.gggggg...',
+      '..gggg....',
+      '...gg.....',
+    ], { g: '#23a050' }],
+    cross: [[
+      'rr....rr',
+      'rrr..rrr',
+      '.rrrrrr.',
+      '..rrrr..',
+      '.rrrrrr.',
+      'rrr..rrr',
+      'rr....rr',
+    ], { r: '#e8433a' }],
+    book: [[
+      'kkkkk.kkkkk',
+      'kwwwwkwwwwk',
+      'kwbbwkwbbwk',
+      'kwwwwkwwwwk',
+      'kwbbwkwbbwk',
+      'kwwwwkwwwwk',
+      'kkkkkkkkkkk',
+    ], { k: '#8a5a2c', w: '#fff8ec', b: '#c9b79a' }],
+    pad: [[
+      '.kkkkkkkkk.',
+      'kggggggggGk',
+      'kgwgggggrgk',
+      'kwwwgggrgrk',
+      'kgwgggggrgk',
+      'kggggggggGk',
+      '.kGk...kGk.',
+    ], { k: '#28324a', g: '#7c8aa6', G: '#5b6884', w: '#ffffff', r: '#ffd21f' }],
+    bulb: [[
+      '..yyyy..',
+      '.yywyyy.',
+      'yywyyyyy',
+      'yyyyyyyy',
+      '.yyyyyy.',
+      '..kkkk..',
+      '..kkkk..',
+    ], { y: '#ffd21f', w: '#fff8c8', k: '#7c8aa6' }],
+    hands: [[
+      'ss......ss',
+      'sss.ss.sss',
+      '.ssssssss.',
+      '..ssssss..',
+      '...cccc...',
+      '..cc..cc..',
+    ], { s: '#ffcf9a', c: '#e6a35a' }],
+    target: [[
+      '..rrrrr..',
+      '.rwwwwwr.',
+      'rwrrrrrwr',
+      'rwrwwwrwr',
+      'rwrwrwrwr',
+      'rwrwwwrwr',
+      'rwrrrrrwr',
+      '.rwwwwwr.',
+      '..rrrrr..',
+    ], { r: '#e8433a', w: '#ffffff' }],
+    building: [[
+      '....rrrr....',
+      '..rrrrrrrr..',
+      'rrrrrrrrrrrr',
+      'wwwwwwwwwwww',
+      'wbbwwbbwwbbw',
+      'wbbwwbbwwbbw',
+      'wwwwwddwwwww',
+      'wbbwwddwwbbw',
+      'wwwwwddwwwww',
+    ], { r: '#c8553d', w: '#efe3cf', b: '#5b97cf', d: '#8a5a3c' }],
+  };
+  function installIcons() {
+    const root = document.documentElement;
+    for (const [name, [grid, pal]] of Object.entries(ICONS)) {
+      root.style.setProperty(`--ico-${name}`, gridSVG(grid, pal));
+    }
+  }
+
+  // ---------- スプライト ----------
+  const FF_PAL = {
+    k: '#2a1f2e', y: '#ffd21f', Y: '#e2a400', w: '#ffffff', h: '#2b1d1a', s: '#ffd9b8',
+    e: '#2a1f2e', p: '#ff9c9c', r: '#e2412b', R: '#a92d22', l: '#ffe066', g: '#3a3a46', b: '#3a2a2a',
+  };
+  const FF_HEAD = [
+    '...kkkkkk...',
+    '..kyyyyyyk..',
+    '.kyyyywwyyk.',
+    '.kyyyywwyyk.',
+    'kYyyyyyyyyYk',
+    'kkYYYYYYYYkk',
+    '.khhhhhhhhk.',
+    '.khhssssshk.',
+    '.khsesssesk.',
+    '.kspssssspk.',
+    '..kkrrrrkk..',
+    '.krrlrrlrrk.',
+    'kgrrrrrrrrgk',
+    '.kllllllllk.',
+  ];
+  const FF_A = FF_HEAD.concat(['.kRRRkkRRRk.', '.kbbk..kbbk.']);
+  const FF_B = FF_HEAD.concat(['..kRRkkRRRk.', '..kbbk..kbbk']);
+  const FF_C = FF_HEAD.concat(['.kRRRkkRRk..', 'kbbk..kbbk..']);
+  const PLAYER_PAL = Object.assign({}, FF_PAL, { y: '#ff5a4a', Y: '#c8322a', w: '#ffffff' });
+
+  const CONE = [
+    '...oo...',
+    '...oo...',
+    '..wwww..',
+    '..oooo..',
+    '..oooo..',
+    '.wwwwww.',
+    '.oooooo.',
+    '.oooooo.',
+    'kkkkkkkk',
+  ];
+
+  let SPR = null;
+  function buildSprites() {
+    const mk = (g, pal) => { const c = gridCanvas(g, pal, 2); return [c, flipped(c)]; };
+    SPR = {
+      ff: [mk(FF_A, FF_PAL), mk(FF_B, FF_PAL), mk(FF_C, FF_PAL)],
+      player: [mk(FF_A, PLAYER_PAL), mk(FF_B, PLAYER_PAL), mk(FF_C, PLAYER_PAL)],
+      cone: gridCanvas(CONE, { o: '#ff6a2a', w: '#ffffff', k: '#9a4b2a' }, 2),
+    };
+    return SPR;
+  }
+
+  // ---------- 背景 ----------
+  function win(c, x, y, w, h, frame = '#f4ead8') {
+    R(c, x - 1, y - 1, w + 2, h + 2, '#6e5444');
+    R(c, x, y, w, h, frame);
+    R(c, x + 2, y + 2, w - 4, h - 4, '#5b97cf');
+    R(c, x + 2, y + 2, w - 4, Math.floor((h - 4) / 2), '#78b0e2');
+    R(c, x + Math.floor(w / 2) - 1, y + 2, 2, h - 4, frame);
+    R(c, x + 2, y + Math.floor(h / 2), w - 4, 1, frame);
+    R(c, x + 3, y + 3, 2, 3, '#d4ecfc');
+    R(c, x - 2, y + h + 1, w + 4, 2, '#cdbca2');
+  }
+
+  function cloud(c, x, y, s) {
+    const parts = [[0, 8, 8], [10, 3, 10], [22, 6, 9], [31, 10, 7], [-8, 11, 6]];
+    parts.forEach(([dx, dy, r]) => circ(c, x + dx * s, y + dy * s + 2, r * s, '#d7e8f6'));
+    parts.forEach(([dx, dy, r]) => circ(c, x + dx * s, y + dy * s, r * s, '#ffffff'));
+    R(c, x - 13 * s, y + 12 * s, 50 * s, 4 * s, '#ffffff');
+    R(c, x - 12 * s, y + 16 * s, 48 * s, 2 * s, '#d7e8f6');
+  }
+
+  function tree(c, x, y, r) {
+    R(c, x - 2, y, 5, GROUND - y + 2, '#7a4f2f');
+    R(c, x + 1, y, 2, GROUND - y + 2, '#5d3a22');
+    circ(c, x - r * 0.55, y - r * 0.1, r * 0.75, '#2f7d32');
+    circ(c, x + r * 0.55, y - r * 0.05, r * 0.75, '#2f7d32');
+    circ(c, x, y - r * 0.6, r * 0.85, '#2f7d32');
+    circ(c, x - r * 0.45, y - r * 0.25, r * 0.6, '#47a64a');
+    circ(c, x + r * 0.35, y - r * 0.2, r * 0.6, '#47a64a');
+    circ(c, x - r * 0.1, y - r * 0.7, r * 0.65, '#47a64a');
+    circ(c, x - r * 0.3, y - r * 0.85, r * 0.3, '#7cc95a');
+    circ(c, x - r * 0.65, y - r * 0.35, r * 0.22, '#7cc95a');
+    circ(c, x + r * 0.3, y - r * 0.5, r * 0.2, '#7cc95a');
+  }
+
+  function bush(c, x, y, r) {
+    circ(c, x, y, r, '#2c7a35');
+    circ(c, x - r * 0.3, y - r * 0.3, r * 0.65, '#3f9a45');
+    circ(c, x - r * 0.4, y - r * 0.5, r * 0.25, '#6fc35a');
+    circ(c, x + r * 0.3, y - r * 0.2, r * 0.18, '#6fc35a');
+  }
+
+  // 主要な建物（燃える可能性のある建物）
+  const BUILDINGS = [
+    { name: 'ひので荘', type: 'house', x: 130, w: 84, top: 52, roofBase: 84, wall: '#ecd3ae', wallD: '#d2b48a', wallL: '#e0c49c', roof: '#c8553d', roofD: '#9b3d2e' },
+    { name: '炎上商店', type: 'shop', x: 252, w: 104, top: 96, wall: '#e8c595', wallD: '#cfa676', wallL: '#d9b17f' },
+    { name: 'やまだ', type: 'house', x: 360, w: 58, top: 92, roofBase: 112, wall: '#d9dde6', wallD: '#bcc2ce', wallL: '#cdd2dc', roof: '#c8553d', roofD: '#9b3d2e' },
+    { name: 'コーポ炎上', type: 'apt', x: 422, w: 58, top: 80, wall: '#e9cfa6', wallD: '#cdb08a', wallL: '#dcc098', roof: '#b84f3a', roofD: '#8f3b2c' },
+  ];
+
+  function roofYAt(b, x) {
+    if (b.type !== 'house') return b.top;
+    const cx = b.x + b.w / 2, topHalf = b.w * 0.24, baseHalf = b.w / 2 + 5;
+    const d = Math.abs(x - cx);
+    if (d <= topHalf) return b.top;
+    const k = Math.min(1, (d - topHalf) / (baseHalf - topHalf));
+    return b.top + k * (b.roofBase - b.top);
+  }
+
+  function drawHouse(c, b) {
+    const { x, w } = b;
+    R(c, x, b.roofBase, w, GROUND - b.roofBase, b.wall);
+    for (let y = b.roofBase + 5; y < GROUND; y += 5) R(c, x, y, w, 1, b.wallL);
+    R(c, x + w - 4, b.roofBase, 4, GROUND - b.roofBase, b.wallD);
+    // 屋根（台形）
+    const rh = b.roofBase - b.top, cx = x + w / 2;
+    const topHalf = w * 0.24, baseHalf = w / 2 + 5;
+    for (let i = 0; i <= rh; i++) {
+      const half = Math.round(topHalf + (baseHalf - topHalf) * (i / rh));
+      R(c, cx - half, b.top + i, half * 2, 1, (i % 4 === 3) ? b.roofD : b.roof);
+    }
+    R(c, cx - topHalf - 1, b.top - 2, topHalf * 2 + 2, 2, b.roofD);
+    R(c, x - 6, b.roofBase, w + 12, 3, b.roofD);
+    // 窓
+    b.windows = [];
+    const ww = w > 70 ? 22 : 16, wh = w > 70 ? 20 : 16;
+    const cols = w > 70 ? [x + 10, x + w - 10 - ww] : [x + 6, x + w - 6 - ww];
+    const rows = w > 70 ? [b.roofBase + 10, b.roofBase + 44] : [b.roofBase + 8];
+    rows.forEach(ry => cols.forEach(cxw => { win(c, cxw, ry, ww, wh); b.windows.push({ x: cxw, y: ry, w: ww, h: wh }); }));
+    // 看板とドア
+    const sw = Math.min(58, w - 14);
+    b.sign = { x: x + (w - sw) / 2, y: GROUND - 44, w: sw, h: 14 };
+    const dw = 14;
+    R(c, x + w / 2 - dw / 2 - 1, GROUND - 26, dw + 2, 26, '#5d3a26');
+    R(c, x + w / 2 - dw / 2, GROUND - 25, dw, 25, '#8a5a3c');
+    R(c, x + w / 2 + dw / 2 - 4, GROUND - 13, 2, 2, '#ffd21f');
+    R(c, x - 1, GROUND - 3, w + 2, 3, '#9d8a74');
+  }
+
+  function drawShop(c, b) {
+    const { x, w, top } = b;
+    R(c, x, top, w, GROUND - top, b.wall);
+    for (let y = top + 4, i = 0; y < GROUND; y += 5, i++) {
+      R(c, x, y, w, 1, b.wallL);
+      for (let bx = x + (i % 2 ? 4 : 10); bx < x + w; bx += 12) R(c, bx, y - 4, 1, 4, b.wallL);
+    }
+    R(c, x + w - 4, top, 4, GROUND - top, b.wallD);
+    // 胸壁
+    R(c, x - 3, top - 4, w + 6, 6, '#a9533b');
+    R(c, x - 3, top + 1, w + 6, 1, '#7d3a28');
+    for (let mx = x - 3; mx < x + w; mx += 12) { R(c, mx, top - 10, 7, 6, '#a9533b'); R(c, mx, top - 10, 7, 1, '#c8735a'); }
+    // 看板
+    b.sign = { x: x + 9, y: top + 12, w: w - 18, h: 26 };
+    R(c, b.sign.x - 3, b.sign.y - 3, b.sign.w + 6, b.sign.h + 6, '#4a2f25');
+    R(c, b.sign.x - 1, b.sign.y - 1, b.sign.w + 2, b.sign.h + 2, '#d9c6c0');
+    R(c, b.sign.x, b.sign.y, b.sign.w, b.sign.h, '#fbeeee');
+    // ひさし
+    b.windows = [];
+    const aw = [[x + 6, 38], [x + w - 44, 38]];
+    aw.forEach(([ax, awid]) => {
+      R(c, ax - 2, top + 50, awid + 4, 3, '#7d3a28');
+      for (let i = 0; i < awid; i += 6) R(c, ax + i, top + 53, 3, 6, '#c9673f'), R(c, ax + i + 3, top + 53, 3, 6, '#f0b07c');
+      win(c, ax + 3, top + 62, awid - 6, 24);
+      b.windows.push({ x: ax + 3, y: top + 62, w: awid - 6, h: 24 });
+    });
+    // ドア
+    R(c, x + w / 2 - 9, top + 58, 18, GROUND - top - 58, '#5d3a26');
+    R(c, x + w / 2 - 8, top + 59, 16, GROUND - top - 59, '#8a5a3c');
+    R(c, x + w / 2 - 6, top + 62, 12, 14, '#78b0e2');
+  }
+
+  function drawApt(c, b) {
+    const { x, w, top } = b;
+    R(c, x, top, w, GROUND - top, b.wall);
+    R(c, x + w - 4, top, 4, GROUND - top, b.wallD);
+    R(c, x - 3, top - 6, w + 6, 6, b.roof);
+    R(c, x - 3, top - 1, w + 6, 2, b.roofD);
+    for (let i = 0; i < w + 6; i += 6) R(c, x - 3 + i, top - 6, 3, 1, '#d8705a');
+    b.windows = [];
+    [top + 8, top + 36, top + 64].forEach(ry => {
+      R(c, x, ry + 22, w, 2, b.wallD);
+      [x + 6, x + w - 24].forEach(rx => { win(c, rx, ry, 18, 18); b.windows.push({ x: rx, y: ry, w: 18, h: 18 }); });
+    });
+    b.sign = { x: x + 7, y: GROUND - 26, w: w - 14, h: 13 };
+    R(c, x + w / 2 - 6, GROUND - 12, 12, 12, '#8a5a3c');
+  }
+
+  function drawSign(c, b) {
+    if (b.type === 'shop') return;
+    const s = b.sign;
+    R(c, s.x - 2, s.y - 2, s.w + 4, s.h + 4, '#4a2f25');
+    R(c, s.x, s.y, s.w, s.h, '#fbeeee');
+  }
+
+  function buildBackground() {
+    const bg = document.createElement('canvas');
+    bg.width = W; bg.height = H;
+    const c = bg.getContext('2d');
+    // 空
+    const bands = ['#4b9ce4', '#55a4e8', '#61adec', '#6eb6ef', '#7cbff2', '#8ac8f4', '#98d0f6', '#a6d8f8', '#b4dff9', '#c2e6fb'];
+    const bh = Math.ceil(GROUND / bands.length);
+    bands.forEach((col, i) => R(c, 0, i * bh, W, bh, col));
+    cloud(c, 112, 12, 1);
+    cloud(c, 384, 34, 0.85);
+    cloud(c, 172, 44, 0.45);
+    // 遠景のビル
+    const far = [[0, 36, 54], [44, 30, 70], [150, 36, 66], [188, 30, 18], [222, 30, 50], [300, 34, 36], [336, 30, 58], [388, 34, 26], [426, 44, 44]];
+    far.forEach(([fx, fw, ft]) => {
+      R(c, fx, ft, fw, GROUND - ft, '#93b4d4');
+      R(c, fx + fw - 4, ft, 4, GROUND - ft, '#7f9fc2');
+      R(c, fx, ft, fw, 2, '#a9c4de');
+      for (let wy = ft + 6; wy < GROUND - 10; wy += 9)
+        for (let wx = fx + 4; wx < fx + fw - 7; wx += 8) R(c, wx, wy, 4, 5, '#bcd3ea');
+    });
+    // 左奥の建物（パネルの裏）
+    R(c, 0, 90, 118, GROUND - 90, '#e3cfb0');
+    R(c, 0, 86, 122, 5, '#b84f3a');
+    for (let ry = 98; ry < GROUND - 30; ry += 30) [8, 44, 80].forEach(rx => win(c, rx, ry, 22, 18));
+    // 電柱
+    R(c, 38, 30, 5, GROUND - 26, '#9aa0a8');
+    R(c, 41, 30, 2, GROUND - 26, '#7d838b');
+    R(c, 28, 44, 26, 3, '#7d838b');
+    // 木（奥）
+    tree(c, 112, 150, 22);
+    tree(c, 233, 146, 20);
+    // 建物
+    BUILDINGS.forEach(b => {
+      if (b.type === 'house') drawHouse(c, b);
+      else if (b.type === 'shop') drawShop(c, b);
+      else drawApt(c, b);
+      drawSign(c, b);
+      b.cx = b.x + b.w / 2;
+    });
+    // 歩道
+    R(c, 0, GROUND, W, 24, '#d8d3ca');
+    for (let y = GROUND + 8; y < GROUND + 24; y += 8) R(c, 0, y, W, 1, '#c4beb4');
+    for (let y = GROUND, i = 0; y < GROUND + 24; y += 8, i++)
+      for (let x = (i % 2) * 8; x < W; x += 16) R(c, x, y, 1, 8, '#c4beb4');
+    R(c, 0, GROUND, W, 2, '#bdb6aa');
+    // 店の階段
+    const shop = BUILDINGS[1];
+    R(c, shop.x + 22, GROUND - 6, shop.w - 44, 3, '#c9c5be');
+    R(c, shop.x + 18, GROUND - 3, shop.w - 36, 4, '#b3afa8');
+    R(c, shop.x + 14, GROUND + 1, shop.w - 28, 4, '#c9c5be');
+    R(c, shop.x + 14, GROUND + 5, shop.w - 28, 1, '#9a968f');
+    // 縁石と車道
+    R(c, 0, GROUND + 24, W, 3, '#aaa69e');
+    R(c, 0, GROUND + 27, W, 1, '#8a8780');
+    R(c, 0, GROUND + 28, W, H - GROUND - 28, '#7f8289');
+    for (let i = 0; i < 260; i++) R(c, (i * 97) % W, GROUND + 30 + ((i * 53) % (H - GROUND - 30)), 2, 1, i % 2 ? '#878a91' : '#767980');
+    return bg;
+  }
+
+  function buildForeground() {
+    const fg = document.createElement('canvas');
+    fg.width = W; fg.height = H;
+    const c = fg.getContext('2d');
+    bush(c, 10, 262, 16); bush(c, 34, 268, 14); bush(c, 58, 272, 12);
+    bush(c, 470, 258, 18); bush(c, 446, 266, 14); bush(c, 424, 272, 12);
+    return fg;
+  }
+
+  // ---------- 消防車 ----------
+  function drawTruck(c, x, y, t) {
+    // y = 車輪の接地位置
+    const body = '#d8342a', dark = '#a8241d', light = '#f25a4a';
+    R(c, x + 2, y - 4, 104, 3, 'rgba(0,0,0,0.18)');
+    // はしご
+    R(c, x + 30, y - 50, 74, 3, '#e8ecf2'); R(c, x + 30, y - 44, 74, 3, '#e8ecf2');
+    for (let i = x + 32; i < x + 104; i += 6) R(c, i, y - 47, 2, 3, '#b9c1cc');
+    R(c, x + 30, y - 41, 74, 1, '#9aa3ae');
+    // 後部
+    R(c, x + 30, y - 40, 74, 30, body);
+    R(c, x + 30, y - 40, 74, 2, light);
+    for (let i = 0; i < 3; i++) {
+      const sx = x + 34 + i * 23;
+      R(c, sx, y - 36, 20, 20, '#d9dde4');
+      for (let ly = y - 34; ly < y - 16; ly += 3) R(c, sx + 1, ly, 18, 1, '#aeb5c0');
+    }
+    // 運転席
+    R(c, x + 2, y - 36, 30, 26, body);
+    R(c, x + 4, y - 40, 26, 5, body);
+    R(c, x + 6, y - 34, 20, 10, '#9fd0f2'); R(c, x + 7, y - 33, 6, 3, '#e2f3ff');
+    R(c, x + 2, y - 36, 2, 26, light);
+    R(c, x + 28, y - 30, 2, 10, dark);
+    // ライン
+    R(c, x + 2, y - 16, 102, 3, '#ffe066');
+    R(c, x + 2, y - 13, 102, 4, dark);
+    R(c, x - 1, y - 12, 6, 4, '#c9cdd4');
+    R(c, x + 1, y - 22, 3, 3, '#fff6b0');
+    // 回転灯
+    const on = Math.floor(t * 6) % 2;
+    R(c, x + 8, y - 43, 16, 3, '#3a3a46');
+    R(c, x + 9, y - 46, 6, 3, on ? '#ff3a3a' : '#7a2020');
+    R(c, x + 17, y - 46, 6, 3, on ? '#3a3a46' : '#ff3a3a');
+    // 車輪
+    [x + 20, x + 84].forEach(wx => { circ(c, wx, y - 6, 6, '#26262e'); circ(c, wx, y - 6, 3, '#b9c1cc'); R(c, wx - 1, y - 7, 2, 2, '#ffffff'); });
+  }
+
+  // ---------- マスコット（ヒヨコ隊長） ----------
+  function drawMascot(c, t) {
+    c.clearRect(0, 0, 32, 32);
+    const bob = Math.round(Math.sin(t * 5) * 0.8);
+    const k = '#2a1f2e';
+    // 足
+    R(c, 9, 29, 3, 2, '#ff9a1f'); R(c, 15, 29, 3, 2, '#ff9a1f');
+    // 体
+    circ(c, 13, 20 + bob, 9, k);
+    circ(c, 13, 20 + bob, 8, '#ffffff');
+    R(c, 7, 24 + bob, 12, 3, '#e6edf5');
+    // ヘルメット
+    circ(c, 13, 12 + bob, 8, k);
+    circ(c, 13, 12 + bob, 7, '#e2412b');
+    R(c, 4, 13 + bob, 19, 7, '#ffffff');
+    R(c, 3, 12 + bob, 21, 2, k);
+    R(c, 4, 11 + bob, 19, 1, '#b72e1f');
+    R(c, 11, 6 + bob, 4, 4, '#ffffff'); R(c, 12, 7 + bob, 2, 2, '#ff9fb2');
+    // 顔
+    R(c, 15, 15 + bob, 2, 3, k);
+    R(c, 9, 15 + bob, 2, 3, k);
+    R(c, 7, 18 + bob, 3, 2, '#ffb3c1'); R(c, 17, 18 + bob, 3, 2, '#ffb3c1');
+    R(c, 11, 18 + bob, 4, 2, '#ffb21f'); R(c, 12, 20 + bob, 2, 1, '#e08a00');
+    // 羽とメガホン
+    R(c, 18, 21 + bob, 4, 4, '#e6edf5');
+    R(c, 20, 18 + bob, 4, 6, '#e3a000');
+    R(c, 24, 15 + bob, 2, 12, '#ffd21f');
+    R(c, 26, 13 + bob, 2, 16, '#ffd21f');
+    R(c, 28, 12 + bob, 2, 18, '#ffe680');
+    R(c, 22, 19 + bob, 2, 4, '#ffd21f');
+    const w = Math.floor(t * 4) % 2;
+    if (w) { R(c, 30, 14 + bob, 1, 3, '#ffffff'); R(c, 30, 23 + bob, 1, 3, '#ffffff'); }
+  }
+
+  return {
+    W, H, GROUND, R, circ, gridCanvas, installIcons, buildSprites, buildBackground, buildForeground,
+    BUILDINGS, roofYAt, drawTruck, drawMascot, get SPR() { return SPR; },
+  };
+})();
+
+</script>
+  <script>
+// 炎上市 — ゲーム本体
+(() => {
+  'use strict';
+  const { W, H, GROUND, R, circ } = PX;
+  const LANE_MIN = 204, LANE_MAX = 222, RANGE = 180;
+  const $ = s => document.querySelector(s);
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const fmt = n => Math.round(n).toLocaleString('ja-JP');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  PX.installIcons();
+  const SPR = PX.buildSprites();
+  const BG = PX.buildBackground();
+  const FG = PX.buildForeground();
+  const B = PX.BUILDINGS;
+
+  const cv = $('#scene');
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const mascotCtx = $('#mascot').getContext('2d');
+  const spark = $('#spark'), sctx = spark.getContext('2d');
+  const hud = $('#hud'), overlay = $('#overlay');
+
+  const WAVES = [
+    { name: '第1出動', sub: '話題の火元を消せ！', spawns: [0, 9, 18, 27], growth: 2.6, spread: 0.06, smolder: 0.5 },
+    { name: '第2出動', sub: '延焼に注意！ 防火壁を使おう', spawns: [0, 5, 11, 11, 18, 25, 31], growth: 3.7, spread: 0.1, smolder: 0.5 },
+    { name: '第3出動', sub: '大規模炎上！ 協力して鎮火せよ', spawns: [0, 0, 6, 10, 10, 16, 21, 21, 28, 33], growth: 4.7, spread: 0.13, smolder: 0.45 },
+  ];
+  const TRUCK = { x: 34, y: 224 };
+  const GAPS = [0, 1, 2].map(i => ({ i, x: (B[i].x + B[i].w + B[i + 1].x) / 2 }));
+
+  // ---------- 状態 ----------
+  let S;
+  function freshState(mode) {
+    B.forEach(b => Object.assign(b, { fire: 0, peak: 0, topic: null, burnt: 0, overT: 0, smolder: 0, pending: null, lastHit: -9, lastHitByPlayer: -9 }));
+    return {
+      mode, t: 0, wave: -1, waveT: 0, spawnIdx: 0, hearts: 4, score: 0, walls: 3,
+      activeWalls: [], topics: {}, topicQueue: shuffle(TOPICS), particles: [], water: [], smoke: [], embers: [],
+      stats: { dispatch: 0, extinguished: 0, prevented: 0, invCount: 0, claimTotal: 0, claimRight: 0, quizTotal: 0, quizRight: 0, blocked: 0 },
+      player: { x: 150, y: 214, dir: 1, aimX: 300, aimY: 140, spraying: false, walkT: 0, moving: false },
+      crew: makeCrew(mode),
+      waveClearT: 0, lastSpreadMsg: -9, paused: false,
+    };
+  }
+  function makeCrew(mode) {
+    if (mode === 'title') {
+      return [
+        { x: 128, y: 226, side: -1, static: true, idle: true, hose: true },
+        { x: 156, y: 210, side: -1, aimDx: -24 },
+        { x: 180, y: 200, side: -1, aimDx: -8 },
+        { x: 204, y: 216, side: -1, aimDx: 6 },
+        { x: 396, y: 208, side: 1, aimDx: 26 },
+        { x: 432, y: 212, side: 1, aimDx: 30, idle: true },
+        { x: 26, y: 232, side: -1, static: true, idle: true },
+      ].map(c => Object.assign({ dir: 1, walkT: 0, target: null, spraying: false, rate: 60, power: 0 }, c));
+    }
+    return [
+      { x: 150, y: 210 }, { x: 172, y: 220 }, { x: 194, y: 206 },
+    ].map(c => Object.assign({ dir: 1, walkT: 0, target: null, spraying: false, rate: 40, power: 0.05, side: 1, offset: rand(40, 80), think: 0 }, c));
+  }
+
+  // ---------- 入力 ----------
+  const keys = {};
+  const pointer = { down: false, x: 0, y: 0 };
+  addEventListener('keydown', e => {
+    if (S.mode === 'modal' || S.mode === 'result') return;
+    keys[e.code] = true;
+    if (S.mode === 'play') {
+      if (e.code === 'KeyE') investigateNearest();
+      if (e.code === 'KeyF') placeWall();
+      if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+    } else if (S.mode === 'title' && (e.code === 'Enter' || e.code === 'Space')) {
+      e.preventDefault(); startGame();
+    }
+  });
+  addEventListener('keyup', e => { keys[e.code] = false; });
+  function toLogical(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+  }
+  cv.addEventListener('pointerdown', e => { const p = toLogical(e); pointer.down = true; pointer.x = p.x; pointer.y = p.y; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => { const p = toLogical(e); pointer.x = p.x; pointer.y = p.y; });
+  const up = () => { pointer.down = false; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+
+  $('#startBtn').onclick = startGame;
+  $('#howBtn').onclick = () => showHowTo(false);
+  $('#btnInvestigate').onclick = investigateNearest;
+  $('#btnWall').onclick = placeWall;
+  $('#pauseBtn').onclick = togglePause;
+  $('#trendToggle').onclick = () => $('#trend').classList.toggle('collapsed');
+
+  // ---------- 看板（HTML） ----------
+  const signEls = B.map((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'sign idle';
+    const s = b.sign;
+    el.style.left = (s.x / W * 100) + '%';
+    el.style.top = (s.y / H * 100) + '%';
+    el.style.width = (s.w / W * 100) + '%';
+    el.style.height = (s.h / H * 100) + '%';
+    el.addEventListener('pointerdown', e => { e.stopPropagation(); if (S.mode === 'play' && b.fire > 0) openInvestigation(b); });
+    $('#signs').appendChild(el);
+    return el;
+  });
+  function updateSigns() {
+    B.forEach((b, i) => {
+      const el = signEls[i], s = b.sign;
+      let text = '', cls = 'sign idle';
+      const tp = b.topic && S.topics[b.topic];
+      if (tp && (b.fire > 0 || b.smolder > 0)) {
+        text = tp.debunked ? 'デマと判明' : tp.def.tag;
+        cls = 'sign' + (b.fire > 0 ? ' burning' : '') + (tp.investigated ? ' done' : '') + (tp.debunked ? ' debunked' : '');
+      } else {
+        text = b.name; cls = 'sign idle';
+      }
+      if (S.mode === 'title' && cls !== 'sign idle') cls += ' done';
+      if (el.textContent !== text) {
+        el.textContent = text;
+        const wcq = s.w / W * 100, hcq = s.h / H * 56.25;
+        el.style.fontSize = Math.min(wcq / Math.max(3.4, text.length * 1.12), hcq * 0.62) + 'cqw';
+      }
+      if (el.className !== cls) el.className = cls;
+    });
+  }
+
+  // ---------- 話題（トピック） ----------
+  function getTopic(def) {
+    if (!S.topics[def.id]) {
+      const base = Math.round(rand(2000, 9000));
+      S.topics[def.id] = { def, posts: base, base, hist: [base], investigated: false, debunked: false, out: false, outT: 0, histT: 0 };
+    }
+    const tp = S.topics[def.id];
+    tp.out = false;
+    return tp;
+  }
+  function burningOf(tid) { return B.filter(b => b.topic === tid && b.fire > 0); }
+
+  function ignite(b, def, f) {
+    const tp = getTopic(def);
+    b.topic = def.id; b.fire = f; b.peak = f; b.overT = 0; b.smolder = 0;
+    S.stats.dispatch += (S.mode === 'play') ? 1 : 0;
+  }
+
+  function extinguish(b, byPlayer) {
+    const tid = b.topic;
+    b.fire = 0; b.peak = 0; b.overT = 0;
+    if (S.mode !== 'play') return;
+    S.stats.extinguished++;
+    addScore(100);
+    burst(b.cx, b.top + 20, 18, ['#ffffff', '#bfe8ff', '#8fd0ff']);
+    const tp = S.topics[tid];
+    if (tp && burningOf(tid).length === 0) {
+      tp.out = true; tp.outT = S.t;
+      announce(`${tp.def.tag} を鎮火しました！`, 'drop');
+    }
+  }
+
+  // ---------- ゲーム進行 ----------
+  function startGame() {
+    S = freshState('play');
+    overlay.classList.remove('show'); overlay.innerHTML = '';
+    hud.classList.add('playing');
+    startWave(0);
+  }
+  function startWave(i) {
+    S.wave = i; S.waveT = 0; S.spawnIdx = 0; S.waveClearT = 0; S.mode = 'play';
+    const w = WAVES[i];
+    banner(`${w.name}！`, w.sub);
+    announce(i === 0 ? '話題が急増！　消防隊が出動しました！' : `${w.name}！ ${w.sub}`);
+  }
+  function addScore(n) { S.score += n; }
+
+  function scheduleSpawn() {
+    const w = WAVES[S.wave];
+    if (S.spawnIdx >= w.spawns.length || S.waveT < w.spawns[S.spawnIdx]) return;
+    const free = B.filter(b => b.fire <= 0 && b.smolder <= 0);
+    if (!free.length) return;
+    const b = free[Math.floor(Math.random() * free.length)];
+    if (!S.topicQueue.length) S.topicQueue = shuffle(TOPICS);
+    b.pending = S.topicQueue.pop();
+    b.topic = b.pending.id;
+    b.patrol = 0;
+    getTopic(b.pending);
+    const first = S.spawnIdx === 0;
+    S.spawnIdx++;
+    if (!first && Math.random() < w.smolder) {
+      b.smolder = 3.6;
+      announce(`くすぶり発見！ ${b.pending.tag} — 建物の前でパトロールして未然に防ごう！`, 'search');
+    } else {
+      ignite(b, b.pending, first ? 40 : 50);
+      announce(`${b.pending.tag} が炎上！ 消火せよ！`);
+      b.pending = null;
+    }
+  }
+
+  function update(dt) {
+    S.t += dt;
+    if (S.mode === 'play' && !S.paused) {
+      S.waveT += dt;
+      scheduleSpawn();
+      updatePlayer(dt);
+      updateFires(dt, WAVES[S.wave]);
+      checkWaveClear(dt);
+    } else if (S.mode === 'title') {
+      updateTitleDemo(dt);
+    }
+    if (!S.paused && S.mode !== 'modal') {
+      updateCrew(dt);
+      updateParticles(dt);
+      updateTopics(dt);
+    }
+  }
+
+  function updateTitleDemo(dt) {
+    const b = B[1];
+    if (!b.topic) { b.topic = 'hatsugen'; getTopic(TOPICS[0]); b.peak = 100; }
+    b.fire = 74 + Math.sin(S.t * 0.7) * 10;
+    b.peak = 100;
+    b.lastHit = S.t;
+    const tp = S.topics.hatsugen;
+    if (!tp.demo) {
+      tp.demo = true; tp.base = 15000;
+      tp.hist = Array.from({ length: 40 }, (_, i) => 2000 + 70000 * Math.pow(i / 39, 1.6) + Math.sin(i * 1.9) * 2500);
+    }
+    tp.posts = 72000 + S.t * 120;
+  }
+
+  function updatePlayer(dt) {
+    const p = S.player;
+    let mx = 0, my = 0;
+    if (keys.ArrowLeft || keys.KeyA) mx -= 1;
+    if (keys.ArrowRight || keys.KeyD) mx += 1;
+    if (keys.ArrowUp || keys.KeyW) my -= 1;
+    if (keys.ArrowDown || keys.KeyS) my += 1;
+    p.spraying = false;
+    if (pointer.down) {
+      p.aimX = pointer.x; p.aimY = pointer.y;
+      p.spraying = true;
+      // 届かないときは近づく
+      const handX = p.x + p.dir * 12, d = Math.hypot(p.aimX - handX, p.aimY - (p.y - 13));
+      if (mx === 0 && d > RANGE - 10 && pointer.y < GROUND) mx = Math.sign(p.aimX - p.x);
+      if (pointer.y >= LANE_MIN - 6 && mx === 0) { // 道路をタップ → 移動
+        p.spraying = false;
+        if (Math.abs(pointer.x - p.x) > 3) mx = Math.sign(pointer.x - p.x);
+        if (Math.abs(pointer.y - p.y) > 2) my = Math.sign(pointer.y - p.y);
+      }
+    } else if (keys.Space || keys.KeyJ) {
+      const tgt = autoTarget(p);
+      if (tgt) { p.aimX = tgt.x; p.aimY = tgt.y; } else { p.aimX = p.x + p.dir * 80; p.aimY = p.y - 60; }
+      p.spraying = true;
+    }
+    const sp = 72;
+    p.x = clamp(p.x + mx * sp * dt, 8, W - 8);
+    p.y = clamp(p.y + my * sp * 0.6 * dt, LANE_MIN, LANE_MAX);
+    p.moving = mx !== 0 || my !== 0;
+    if (p.moving) p.walkT += dt;
+    if (p.spraying) p.dir = p.aimX >= p.x ? 1 : -1; else if (mx) p.dir = mx;
+    if (p.spraying) emitWater(p, p.aimX, p.aimY, 80, 0.25, dt, true);
+
+    // パトロール：くすぶりを未然に防ぐ
+    B.forEach(b => {
+      if (b.smolder <= 0) return;
+      if (Math.abs(p.x - b.cx) < b.w / 2 + 10) b.patrol = (b.patrol || 0) + dt; else b.patrol = Math.max(0, (b.patrol || 0) - dt);
+      if (b.patrol >= 1.2) {
+        b.smolder = 0; b.patrol = 0;
+        S.stats.prevented++; S.stats.dispatch++;
+        addScore(80);
+        burst(b.cx, b.top + 30, 16, ['#9ff0b8', '#ffffff', '#34b45c']);
+        toast('パトロールで未然に防いだ！ +80');
+        announce(`パトロール成功！ ${b.pending.tag} の延焼を未然に防ぎました`, 'shield');
+        b.topic = null; b.pending = null;
+      }
+    });
+  }
+
+  function autoTarget(p) {
+    let best = null, bd = 1e9;
+    B.forEach(b => {
+      if (b.fire <= 0) return;
+      const tx = clamp(p.x, b.x + 6, b.x + b.w - 6);
+      const ty = PX.roofYAt(b, tx) + 18;
+      const d = Math.hypot(tx - p.x, ty - p.y);
+      if (d < bd) { bd = d; best = { x: tx, y: ty }; }
+    });
+    return best;
+  }
+
+  function wallBetween(i, j) {
+    const g = Math.min(i, j);
+    return S.activeWalls.some(w => w.gap === g);
+  }
+
+  function updateFires(dt, w) {
+    B.forEach((b, i) => {
+      if (b.smolder > 0) {
+        b.smolder -= dt;
+        if (b.smolder <= 0) {
+          ignite(b, b.pending, 45);
+          announce(`${b.pending.tag} が炎上！ 消火せよ！`);
+          b.pending = null;
+        }
+        return;
+      }
+      if (b.fire <= 0) return;
+      const tp = S.topics[b.topic];
+      const g = w.growth * (tp && tp.debunked ? 0.35 : 1);
+      b.fire = Math.min(100, b.fire + g * dt);
+      b.peak = Math.max(b.peak, b.fire);
+      b.burnt = Math.min(1, b.burnt + dt * 0.004 * b.fire / 100);
+      // 延焼
+      if (b.fire >= 70) {
+        [i - 1, i + 1].forEach(j => {
+          const n = B[j];
+          if (!n || n.fire > 0 || n.smolder > 0) return;
+          if (Math.random() < w.spread * dt * (b.fire / 100)) {
+            if (wallBetween(i, j)) {
+              S.stats.blocked++;
+              if (S.t - S.lastSpreadMsg > 3) { toast('防火壁が延焼をブロック！'); S.lastSpreadMsg = S.t; addScore(30); }
+            } else {
+              ignite(n, tp.def, 35);
+              announce(`延焼！ ${tp.def.tag} がとなりに燃え広がった！`);
+            }
+          }
+        });
+      }
+      // 全焼で街の信頼ダウン
+      if (b.fire >= 95) {
+        b.overT += dt;
+        if (b.overT > 5) {
+          b.overT = 0;
+          S.hearts--;
+          toast('街の信頼が下がった…');
+          announce('炎上が長引いて、街の信頼が下がっています！');
+          if (S.hearts <= 0) endGame(false);
+        }
+      } else b.overT = Math.max(0, b.overT - dt);
+    });
+    // 防火壁の時間切れ
+    S.activeWalls = S.activeWalls.filter(wl => (wl.t -= dt) > 0);
+  }
+
+  function checkWaveClear(dt) {
+    const w = WAVES[S.wave];
+    const busy = B.some(b => b.fire > 0 || b.smolder > 0);
+    if (S.spawnIdx >= w.spawns.length && !busy) {
+      if (S.waveClearT === 0) {
+        addScore(200 + S.hearts * 50);
+        banner('鎮火完了！', S.wave < WAVES.length - 1 ? '防火訓練クイズで次に備えよう' : 'すべての炎上を鎮火した！');
+        announce('鎮火完了！ おつかれさまでした！', 'drop');
+      }
+      S.waveClearT += dt;
+      if (S.waveClearT > 2.2) {
+        S.waveClearT = -999;
+        if (S.wave < WAVES.length - 1) openQuiz(2, () => startWave(S.wave + 1));
+        else openQuiz(1, () => endGame(true));
+      }
+    }
+  }
+
+  // ---------- 仲間の消防士 ----------
+  function updateCrew(dt) {
+    S.crew.forEach(c => {
+      if (S.mode === 'title') {
+        c.spraying = !c.idle && !c.static;
+        if (c.static && !c.idle) { c.spraying = false; }
+        if (c.spraying) {
+          const b = B[1];
+          c.dir = b.cx > c.x ? 1 : -1;
+          emitWater(c, b.cx + c.aimDx + Math.sin(S.t * 2 + c.x) * 8, b.top + 40 + Math.sin(S.t * 1.3 + c.y) * 10, c.rate, 0, dt, false);
+        } else c.dir = 1;
+        return;
+      }
+      if (S.mode !== 'play' || S.paused) return;
+      c.think -= dt;
+      if (c.think <= 0 || !c.target || c.target.fire <= 0) {
+        c.think = rand(2, 4);
+        const burning = B.filter(b => b.fire > 0).sort((a, b) => b.fire - a.fire);
+        // 仲間ごとに担当を分散
+        const idx = S.crew.indexOf(c);
+        c.target = burning.length ? burning[idx % burning.length] : null;
+        if (c.target) { c.side = idx % 2 ? 1 : -1; c.offset = c.target.w / 2 + rand(14, 46); c.lane = rand(LANE_MIN, LANE_MAX); }
+      }
+      let tx;
+      if (c.lane !== undefined) c.y += clamp(c.lane - c.y, -20 * dt, 20 * dt);
+      if (c.target) tx = c.target.cx + c.side * c.offset;
+      else tx = TRUCK.x + 120 + S.crew.indexOf(c) * 26;
+      tx = clamp(tx, 10, W - 10);
+      const dx = tx - c.x;
+      c.moving = Math.abs(dx) > 3;
+      if (c.moving) { c.x += Math.sign(dx) * 50 * dt; c.walkT += dt; c.dir = Math.sign(dx); }
+      c.spraying = false;
+      if (c.target && c.target.fire > 0 && Math.abs(dx) < 50) {
+        const b = c.target;
+        c.dir = b.cx > c.x ? 1 : -1;
+        c.spraying = true;
+        emitWater(c, b.cx + Math.sin(S.t * 1.7 + c.x) * b.w * 0.3, PX.roofYAt(b, b.cx) + 22 + Math.sin(S.t * 2.3 + c.y) * 8, c.rate, c.power, dt, false);
+      }
+    });
+  }
+
+  // ---------- 放水 ----------
+  function emitWater(f, tx, ty, rate, power, dt, isPlayer) {
+    f.acc = (f.acc || 0) + rate * dt;
+    const hx = f.x + f.dir * 13, hy = f.y - 13;
+    let dx = tx - hx, dy = ty - hy;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > RANGE) { dx *= RANGE / d; dy *= RANGE / d; }
+    while (f.acc >= 1) {
+      f.acc -= 1;
+      const spread = 3 + Math.hypot(dx, dy) * 0.05;
+      const jx = dx + rand(-spread, spread), jy = dy + rand(-spread, spread);
+      const dist = Math.hypot(jx, jy);
+      const T = Math.max(0.18, dist / 230);
+      const G = 160;
+      S.water.push({ x: hx, y: hy, vx: jx / T, vy: (jy - 0.5 * G * T * T) / T, G, t: 0, T, power, isPlayer, s: Math.random() < 0.4 ? 3 : 2 });
+    }
+  }
+
+  function updateParticles(dt) {
+    // 水
+    for (let i = S.water.length - 1; i >= 0; i--) {
+      const w = S.water[i];
+      w.t += dt; w.px = w.x; w.py = w.y;
+      w.x += w.vx * dt; w.y += w.vy * dt; w.vy += w.G * dt;
+      if (w.t >= w.T) {
+        S.water.splice(i, 1);
+        const b = B.find(b => w.x >= b.x - 4 && w.x <= b.x + b.w + 4 && w.y >= b.top - 30 && w.y <= GROUND);
+        if (b && b.fire > 0 && w.power > 0) {
+          b.fire -= w.power;
+          b.lastHit = S.t;
+          if (w.isPlayer) b.lastHitByPlayer = S.t;
+          if (b.fire <= 0) extinguish(b, w.isPlayer);
+          if (Math.random() < 0.3) S.particles.push(steam(w.x, w.y));
+        } else if (b && b.fire > 0) {
+          b.lastHit = S.t;
+        }
+        if (Math.random() < 0.5) S.particles.push({ x: w.x, y: w.y, vx: rand(-20, 20), vy: rand(-30, 0), life: 0.3, max: 0.3, col: '#ffffff', s: 1, g: 120 });
+      }
+    }
+    // 炎・煙
+    B.forEach(b => {
+      if (b.fire <= 0 && b.smolder <= 0) return;
+      const f = b.fire / 100;
+      b.smokeAcc = (b.smokeAcc || 0) + (b.smolder > 0 ? 3 : 6 + 22 * f) * dt;
+      while (b.smokeAcc >= 1) {
+        b.smokeAcc -= 1;
+        const x = rand(b.x + 4, b.x + b.w - 4);
+        S.smoke.push({ x, y: PX.roofYAt(b, x) - 14 - 34 * f, vx: rand(2, 12), vy: rand(-20, -10), r: rand(5, 9) * (0.5 + f * 0.8), life: 0, max: rand(3, 5) * (b.smolder > 0 ? 0.4 : 1), gray: Math.random() });
+      }
+      const nEmb = 30 * f * dt;
+      for (let k = 0; k < Math.floor(nEmb) + (Math.random() < nEmb % 1 ? 1 : 0); k++) {
+        const x = rand(b.x, b.x + b.w);
+        S.embers.push({ x, y: PX.roofYAt(b, x) - rand(0, 30 * f), vx: rand(-6, 6), vy: rand(-40, -18), life: 0, max: rand(0.4, 0.9) });
+      }
+    });
+    [S.smoke, S.embers, S.particles].forEach(arr => {
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const p = arr[i];
+        p.life += dt;
+        if (p.life >= p.max) { arr.splice(i, 1); continue; }
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        if (p.g) p.vy += p.g * dt;
+      }
+    });
+    if (S.smoke.length > 320) S.smoke.splice(0, S.smoke.length - 320);
+  }
+  function steam(x, y) { return { x, y, vx: rand(-10, 10), vy: rand(-30, -15), life: 0, max: 0.6, col: '#eef6ff', s: 2 }; }
+  function burst(x, y, n, cols) {
+    for (let i = 0; i < n; i++) S.particles.push({ x, y, vx: rand(-60, 60), vy: rand(-80, -10), g: 140, life: 0, max: rand(0.5, 0.9), col: cols[i % cols.length], s: 2 });
+  }
+
+  // ---------- トレンド ----------
+  function updateTopics(dt) {
+    Object.values(S.topics).forEach(tp => {
+      const bs = B.filter(b => b.topic === tp.def.id && b.fire > 0);
+      const heat = bs.reduce((a, b) => a + b.fire, 0);
+      if (S.mode !== 'title') tp.posts += heat * (tp.debunked ? 3 : 12) * dt;
+      tp.histT += dt;
+      if (tp.histT > 0.5) { tp.histT = 0; tp.hist.push(tp.posts); if (tp.hist.length > 48) tp.hist.shift(); }
+    });
+  }
+
+  // ---------- 描画 ----------
+  function render() {
+    ctx.drawImage(BG, 0, 0);
+    // 焦げ・照り返し
+    B.forEach(b => {
+      if (b.burnt > 0) { ctx.globalAlpha = b.burnt * 0.55; R(ctx, b.x, b.top, b.w, GROUND - b.top, '#3a2a28'); ctx.globalAlpha = 1; }
+      if (b.fire > 0) {
+        ctx.globalAlpha = 0.1 + 0.16 * b.fire / 100 + 0.03 * Math.sin(S.t * 18 + b.x);
+        R(ctx, b.x - 8, b.top - 14, b.w + 16, GROUND - b.top + 14, '#ff7a1f');
+        ctx.globalAlpha = 1;
+      }
+    });
+    // 煙
+    S.smoke.forEach(p => {
+      const k = p.life / p.max;
+      ctx.globalAlpha = Math.min(1, 1.25 * (1 - k)) * Math.min(1, p.life * 3);
+      const col = p.gray < 0.33 ? '#2b2b31' : p.gray < 0.66 ? '#3d3d44' : '#55555c';
+      circ(ctx, p.x, p.y, p.r * (1 + k * 1.8), col);
+    });
+    ctx.globalAlpha = 1;
+    // 炎
+    B.forEach(b => drawSmokeMass(b));
+    B.forEach(b => drawFire(b));
+    S.embers.forEach(p => {
+      const k = p.life / p.max;
+      R(ctx, p.x, p.y, k < 0.5 ? 2 : 1, k < 0.5 ? 2 : 1, k < 0.3 ? '#fff3a0' : k < 0.6 ? '#ffb21f' : '#e5391e');
+    });
+    // くすぶり警告
+    B.forEach(b => { if (b.smolder > 0) drawSmolder(b); });
+    // 防火壁（シールド）
+    S.activeWalls.forEach(wl => drawWallShield(wl));
+    // エンティティ（y順）
+    const ents = [];
+    ents.push({ y: TRUCK.y - 2, d: () => { PX.drawTruck(ctx, TRUCK.x, TRUCK.y, S.t); drawHose(); } });
+    [[258, 219], [290, 220], [372, 218], [416, 221], [460, 219]].forEach(([x, y]) => ents.push({ y, d: () => ctx.drawImage(SPR.cone, x - 8, y - 18) }));
+    S.crew.forEach(c => ents.push({ y: c.y, d: () => drawFF(c, SPR.ff) }));
+    if (S.mode === 'play' || S.mode === 'modal' || S.mode === 'result') ents.push({ y: S.player.y + 0.1, d: () => drawFF(S.player, SPR.player, true) });
+    S.activeWalls.forEach(wl => ents.push({ y: 214, d: () => drawBarricade(wl) }));
+    ents.sort((a, b) => a.y - b.y).forEach(e => e.d());
+    // 水
+    S.water.forEach(w => {
+      if (w.px !== undefined) R(ctx, (w.x + w.px) / 2 - 1, (w.y + w.py) / 2 - 1, 4, 4, '#6cc4ff');
+      R(ctx, w.x - 1, w.y - 1, w.s + 2, w.s + 2, '#8fd6ff');
+    });
+    S.water.forEach(w => { R(ctx, w.x, w.y, w.s, w.s, '#ffffff'); });
+    S.particles.forEach(p => { ctx.globalAlpha = 1 - p.life / p.max; R(ctx, p.x, p.y, p.s, p.s, p.col); });
+    ctx.globalAlpha = 1;
+    ctx.drawImage(FG, 0, 0);
+  }
+
+  const FLAME_LAYERS = [['#c92a1a', 1], ['#ff5a1f', 0.8], ['#ff9a1f', 0.6], ['#ffd23f', 0.4], ['#fff3a8', 0.2]];
+  function tongue(x, base, h, w, phase) {
+    if (h < 2) return;
+    for (const [col, k] of FLAME_LAYERS) {
+      const hh = h * k, ww = w * (0.35 + 0.65 * k);
+      if (hh < 2) continue;
+      for (let r = 0; r < hh; r += 2) {
+        const u = r / hh;
+        const half = (ww / 2) * Math.pow(1 - u, 0.75);
+        const sway = Math.sin(S.t * 7 + phase + u * 3) * u * 3.5;
+        R(ctx, x - half + sway, base - r - 2, Math.max(1, half * 2), 2, col);
+      }
+    }
+  }
+  function drawSmokeMass(b) {
+    const f = b.fire / 100;
+    if (f < 0.25) return;
+    const a = Math.min(1, (f - 0.25) / 0.4);
+    const t = S.t;
+    ctx.globalAlpha = 0.92 * a;
+    const blobs = [[-0.35, -38, 16], [0.05, -50, 20], [0.4, -40, 16], [0.2, -70, 18], [0.55, -72, 14], [-0.15, -78, 14], [0.4, -96, 12]];
+    blobs.forEach(([rx, dy, r], i) => {
+      const x = b.cx + rx * b.w + Math.sin(t * 0.8 + i) * 3 + (dy < -60 ? 10 : 0);
+      const y = b.top + dy * (0.6 + 0.4 * f) + Math.cos(t * 0.7 + i * 2) * 2;
+      circ(ctx, x, y, r * (0.6 + 0.4 * f) * (0.75 + 0.25 * b.w / 104), i % 3 === 0 ? '#3a3a42' : i % 3 === 1 ? '#2c2c33' : '#4a4a52');
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFire(b) {
+    if (b.fire <= 0) return;
+    const f = b.fire / 100, t = S.t;
+    // 窓の炎
+    if (f > 0.3) {
+      const a = (f - 0.3) / 0.7;
+      b.windows.forEach((w, k) => {
+        R(ctx, w.x + 1, w.y + 1, w.w - 2, w.h - 2, '#b8301a');
+        R(ctx, w.x + 2, w.y + w.h * 0.3, w.w - 4, w.h * 0.7 - 2, '#ff7a1f');
+        R(ctx, w.x + 4, w.y + w.h * 0.55, w.w - 8, w.h * 0.45 - 3, '#ffd23f');
+        tongue(w.x + w.w / 2, w.y + 4, a * 22 * (0.75 + 0.25 * Math.sin(t * 9 + k * 2.1)), w.w * 0.9, k * 1.7);
+      });
+    }
+    // 1階の炎
+    if (f > 0.5) {
+      for (let x = b.x + 6; x < b.x + b.w - 2; x += 11) {
+        const h = (f - 0.5) * 50 * (0.6 + 0.4 * Math.sin(t * 8 + x * 1.3));
+        tongue(x, GROUND + 1, h, 12, x);
+      }
+    }
+    // 屋根の炎
+    const step = 8;
+    for (let x = b.x - 2; x <= b.x + b.w + 2; x += step) {
+      const rel = (x - b.x) / b.w;
+      const ry = PX.roofYAt(b, clamp(x, b.x, b.x + b.w));
+      const n = 0.5 + 0.25 * Math.sin(t * 6 + x * 0.9) + 0.25 * Math.sin(t * 4.1 + x * 0.37);
+      const env = 0.5 + 0.5 * Math.sin(clamp(rel, 0, 1) * Math.PI);
+      const h = (10 + 62 * f) * (0.55 + 0.45 * n) * env;
+      tongue(x, ry + 8, h, 15 + 6 * f, x * 0.7);
+    }
+  }
+
+  function drawSmolder(b) {
+    const x = Math.round(b.cx), y = Math.round(b.top - 20 + Math.sin(S.t * 6) * 2);
+    R(ctx, x - 6, y - 8, 12, 14, '#141a28');
+    R(ctx, x - 5, y - 7, 10, 12, '#ffd21f');
+    R(ctx, x - 1, y - 5, 2, 6, '#141a28');
+    R(ctx, x - 1, y + 2, 2, 2, '#141a28');
+    R(ctx, x - 2, y + 6, 4, 2, '#141a28');
+    // 残り時間とパトロール進行
+    const k = clamp(b.smolder / 3.6, 0, 1);
+    R(ctx, x - 12, y + 10, 24, 3, '#141a28');
+    R(ctx, x - 11, y + 11, 22 * k, 1, '#ff6a1f');
+    if (b.patrol > 0) { R(ctx, x - 12, y + 14, 24, 3, '#141a28'); R(ctx, x - 11, y + 15, 22 * clamp(b.patrol / 1.2, 0, 1), 1, '#34b45c'); }
+  }
+
+  function drawFF(c, set, isPlayer) {
+    const frame = c.moving ? 1 + (Math.floor(c.walkT * 8) % 2) : 0;
+    const img = set[frame][c.dir < 0 ? 1 : 0];
+    const x = Math.round(c.x - 12), y = Math.round(c.y - 32);
+    R(ctx, x + 2, c.y - 2, 20, 3, 'rgba(0,0,0,0.18)');
+    ctx.drawImage(img, x, y);
+    if (c.spraying || c.hose) {
+      const hx = c.x + c.dir * 10, hy = c.y - 9;
+      R(ctx, hx - 2, hy - 2, 5, 5, '#3a3a46');
+      R(ctx, hx + c.dir * 3 - 1, hy - 4, 4, 4, '#c9cdd4');
+    }
+    if (isPlayer) {
+      const by = Math.round(c.y - 44 + Math.sin(S.t * 6) * 1.5);
+      R(ctx, c.x - 4, by, 9, 3, '#141a28'); R(ctx, c.x - 3, by + 3, 7, 2, '#141a28'); R(ctx, c.x - 1, by + 5, 3, 2, '#141a28');
+      R(ctx, c.x - 3, by + 1, 7, 2, '#3c90e6'); R(ctx, c.x - 2, by + 3, 5, 1, '#3c90e6'); R(ctx, c.x, by + 4, 1, 2, '#3c90e6');
+      if (c.spraying) {
+        // 狙いのマーカー
+        let dx = c.aimX - c.x, dy = c.aimY - (c.y - 13);
+        const d = Math.hypot(dx, dy); if (d > RANGE) { dx *= RANGE / d; dy *= RANGE / d; }
+        const ax = Math.round(c.x + dx), ay = Math.round(c.y - 13 + dy);
+        ctx.globalAlpha = 0.8;
+        R(ctx, ax - 4, ay, 3, 1, '#ffffff'); R(ctx, ax + 2, ay, 3, 1, '#ffffff'); R(ctx, ax, ay - 4, 1, 3, '#ffffff'); R(ctx, ax, ay + 2, 1, 3, '#ffffff');
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function drawHose() {
+    if (S.mode !== 'title') return;
+    const c = S.crew[0];
+    const pts = [[TRUCK.x + 100, TRUCK.y - 14], [TRUCK.x + 102, TRUCK.y + 2], [c.x - 14, c.y - 2], [c.x - 10, c.y - 9]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+      for (let k = 0; k <= n; k++) { const x = x1 + (x2 - x1) * k / n, y = y1 + (y2 - y1) * k / n; R(ctx, x, y, 2, 2, '#f2f4f7'); R(ctx, x, y + 2, 2, 1, '#b9c1cc'); }
+    }
+  }
+
+  function drawWallShield(wl) {
+    const g = GAPS[wl.gap];
+    const top = Math.min(B[wl.gap].top, B[wl.gap + 1].top) - 30;
+    ctx.globalAlpha = 0.28 + 0.08 * Math.sin(S.t * 5);
+    R(ctx, g.x - 6, top, 12, GROUND - top, '#8fd0ff');
+    ctx.globalAlpha = 0.7;
+    R(ctx, g.x - 6, top, 1, GROUND - top, '#ffffff'); R(ctx, g.x + 5, top, 1, GROUND - top, '#ffffff');
+    for (let y = top + ((S.t * 40) % 12); y < GROUND; y += 12) R(ctx, g.x - 5, y, 10, 1, '#ffffff');
+    ctx.globalAlpha = 1;
+  }
+  function drawBarricade(wl) {
+    const g = GAPS[wl.gap], x = Math.round(g.x - 12), y = 204;
+    R(ctx, x, y, 24, 7, '#141a28');
+    for (let i = 0; i < 22; i += 4) { R(ctx, x + 1 + i, y + 1, 2, 5, '#ffd21f'); R(ctx, x + 3 + i, y + 1, 2, 5, '#2a2a33'); }
+    R(ctx, x + 2, y + 7, 2, 8, '#6b7487'); R(ctx, x + 20, y + 7, 2, 8, '#6b7487');
+    // 残り時間ゲージ
+    R(ctx, x, y - 4, 24, 2, '#141a28'); R(ctx, x, y - 4, 24 * clamp(wl.t / 25, 0, 1), 2, '#34b45c');
+  }
+
+  // ---------- HUD 更新 ----------
+  let hudTimer = 0;
+  function updateHUD(dt) {
+    PX.drawMascot(mascotCtx, S.t);
+    updateSigns();
+    // 炎上度の吹き出し
+    const hot = B.filter(b => b.fire > 0).sort((a, b) => b.fire - a.fire)[0];
+    const heat = $('#heat');
+    if (hot) {
+      heat.classList.add('show');
+      const n = Math.min(5, Math.max(1, Math.ceil(hot.fire / 20 - 0.01)));
+      const icons = '<i class="ico flame"></i>'.repeat(n) + '<i class="ico star"></i>'.repeat(5 - n);
+      if (heat.dataset.n !== String(n)) { $('#heatIcons').innerHTML = icons; heat.dataset.n = n; }
+      $('#heatBar').style.width = hot.fire + '%';
+      const cx = clamp(hot.cx + 26, 150, 300);
+      heat.style.left = (cx / W * 100) + '%';
+      heat.style.top = (Math.max(10, hot.top - 62) / H * 100) + '%';
+    } else heat.classList.remove('show');
+    // 鎮火中の吹き出し
+    const cool = $('#cool');
+    let cb = null;
+    if (S.mode === 'title') cb = B[1];
+    else cb = B.filter(b => b.fire > 0 && S.t - b.lastHitByPlayer < 0.6)[0] || B.filter(b => b.fire > 0 && S.t - b.lastHit < 0.6).sort((a, b) => b.fire - a.fire)[0];
+    if (cb) {
+      cool.classList.add('show');
+      const pct = S.mode === 'title' ? Math.round(56 + Math.sin(S.t * 0.7) * -4) : Math.round(clamp((1 - cb.fire / Math.max(1, cb.peak)) * 100, 0, 99));
+      $('#coolPct').textContent = pct + '%';
+      $('#coolBar').style.width = pct + '%';
+      let lx = cb.cx > 340 ? 136 : 362;
+      if (S.mode === 'title') lx = 360;
+      cool.style.left = (lx / W * 100) + '%';
+      cool.style.top = (Math.max(90, GROUND - 74) / H * 100) + '%';
+    } else cool.classList.remove('show');
+
+    hudTimer -= dt;
+    if (hudTimer > 0) return;
+    hudTimer = 0.2;
+    updateTrend();
+    // ステータス
+    if (S.mode !== 'title') {
+      let hs = '';
+      for (let i = 0; i < 4; i++) hs += `<i class="ico ${i < S.hearts ? (i === S.hearts - 1 && S.hearts < 4 ? 'heartGold' : 'heart') : 'heartEmpty'}"></i>`;
+      $('#hearts').innerHTML = hs + '<span style="margin-left:.3em">街の信頼</span>';
+      $('#waveName').textContent = S.wave >= 0 ? `${WAVES[S.wave].name} (${S.wave + 1}/${WAVES.length})` : '';
+      $('#score').textContent = fmt(S.score);
+      $('#wallCount').textContent = S.walls;
+      $('#pauseBtn').textContent = S.paused ? '▶' : 'Ⅱ';
+      const near = nearestInvestigable();
+      $('#btnInvestigate').disabled = !near;
+      $('#btnWall').disabled = S.walls <= 0;
+    }
+  }
+
+  function updateTrend() {
+    const list = Object.values(S.topics).filter(tp => {
+      const burning = burningOf(tp.def.id).length > 0;
+      return burning || (tp.out && S.t - tp.outT < 8);
+    }).map(tp => {
+      const heat = burningOf(tp.def.id).reduce((a, b) => a + b.fire, 0);
+      return { tp, heat };
+    }).sort((a, b) => b.heat - a.heat);
+    const top = list[0];
+    const name = $('#tTopName'), tag = $('#tTopTag');
+    if (top) {
+      const tp = top.tp;
+      name.textContent = tp.def.tag;
+      const pct = Math.round((tp.posts / tp.base - 1) * 100);
+      $('#tTopCount').textContent = fmt(tp.posts);
+      const pe = $('#tTopPct');
+      if (top.heat > 0) {
+        tag.className = 'tag fire'; tag.innerHTML = (tp.debunked ? 'デマ判明' : '炎上中') + '<i class="ico flame"></i>';
+        pe.className = 'pct'; pe.textContent = `(↑+${pct}%)`;
+      } else {
+        tag.className = 'tag out'; tag.innerHTML = '鎮火<i class="ico drop"></i>';
+        pe.className = 'pct out'; pe.textContent = '(→ 0%)';
+      }
+      drawSpark(tp.hist, top.heat > 0);
+    } else {
+      name.textContent = '#今日のおやつ';
+      tag.className = 'tag calm'; tag.textContent = '平和';
+      $('#tTopCount').textContent = '1,284';
+      const pe = $('#tTopPct'); pe.className = 'pct out'; pe.textContent = '(→ +2%)';
+      drawSpark([1200, 1210, 1230, 1220, 1250, 1260, 1270, 1284], false);
+    }
+    // 2位以下
+    const rows = [];
+    list.slice(1, 3).forEach(({ tp, heat }) => {
+      const pct = Math.round((tp.posts / tp.base - 1) * 100);
+      rows.push(`<div class="trow"><span>${esc(tp.def.tag)}</span>${heat > 0 ? `<span class="hot">炎上中 ↗+${pct}%</span>` : '<span class="done">鎮火</span>'}</div>`);
+    });
+    NEUTRAL_TOPICS.slice(0, Math.max(0, 2 - rows.length)).forEach(n => {
+      rows.push(`<div class="trow"><span>${esc(n.tag)}</span><span class="up">↗+${n.pct}%</span></div>`);
+    });
+    const html = rows.join('');
+    const el = $('#tRows');
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+
+  function drawSpark(hist, hot) {
+    const w = spark.width, h = spark.height;
+    sctx.clearRect(0, 0, w, h);
+    sctx.fillStyle = '#eef1f6';
+    for (let y = 6; y < h; y += 14) sctx.fillRect(0, y, w, 1);
+    if (hist.length < 2) return;
+    const mn = Math.min(...hist), mx = Math.max(...hist);
+    const span = Math.max(1, mx - mn);
+    $('#yMax').textContent = mx >= 10000 ? Math.round(mx / 1000) + 'k' : fmt(mx);
+    $('#yMin').textContent = mn >= 10000 ? Math.round(mn / 1000) + 'k' : fmt(mn);
+    const pts = hist.map((v, i) => [4 + (w - 12) * i / (hist.length - 1), h - 6 - (h - 14) * (v - mn) / span]);
+    sctx.fillStyle = hot ? 'rgba(232,67,58,0.12)' : 'rgba(60,144,230,0.12)';
+    sctx.beginPath(); sctx.moveTo(pts[0][0], h);
+    pts.forEach(p => sctx.lineTo(p[0], p[1])); sctx.lineTo(pts[pts.length - 1][0], h); sctx.fill();
+    sctx.strokeStyle = hot ? '#e8433a' : '#3c90e6'; sctx.lineWidth = 3; sctx.lineJoin = 'round';
+    sctx.beginPath(); pts.forEach((p, i) => i ? sctx.lineTo(p[0], p[1]) : sctx.moveTo(p[0], p[1])); sctx.stroke();
+    const l = pts[pts.length - 1];
+    sctx.fillStyle = hot ? '#e8433a' : '#3c90e6'; sctx.beginPath(); sctx.arc(l[0], l[1], 4.5, 0, Math.PI * 2); sctx.fill();
+  }
+
+  // ---------- 演出 ----------
+  let annTimer = 0;
+  function announce(text, icon = 'flame') {
+    const a = $('#announcer');
+    $('#annText').textContent = text;
+    a.querySelector('.msg .ico').className = 'ico ' + icon;
+    a.classList.remove('flash'); void a.offsetWidth; a.classList.add('flash');
+    annTimer = 0;
+  }
+  let bannerTO, toastTO;
+  function banner(text, sub) {
+    const el = $('#waveBanner');
+    el.innerHTML = `${esc(text)}${sub ? `<small>${esc(sub)}</small>` : ''}`;
+    el.classList.add('show');
+    clearTimeout(bannerTO); bannerTO = setTimeout(() => el.classList.remove('show'), 2000);
+  }
+  function toast(text) {
+    const el = $('#toast');
+    el.textContent = text; el.classList.add('show');
+    clearTimeout(toastTO); toastTO = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+  function togglePause() {
+    if (S.mode !== 'play') return;
+    S.paused = !S.paused;
+    if (S.paused) banner('一時停止中', 'P / Esc で再開'); else $('#waveBanner').classList.remove('show');
+  }
+
+  // ---------- 防火壁 ----------
+  function placeWall() {
+    if (S.mode !== 'play' || S.paused || S.walls <= 0) return;
+    const g = GAPS.slice().sort((a, b) => Math.abs(a.x - S.player.x) - Math.abs(b.x - S.player.x))[0];
+    const ex = S.activeWalls.find(w => w.gap === g.i);
+    if (ex) ex.t = 25; else S.activeWalls.push({ gap: g.i, t: 25 });
+    S.walls--;
+    burst(g.x, 200, 12, ['#8fd0ff', '#ffffff', '#ffd21f']);
+    toast('防火壁 設置！');
+    announce('防火壁を設置！ となりへの延焼を防ぎます', 'shield');
+  }
+
+  // ---------- 火元調査 ----------
+  function nearestInvestigable() {
+    if (S.mode !== 'play') return null;
+    const c = B.filter(b => b.fire > 0 && S.topics[b.topic] && !S.topics[b.topic].investigated)
+      .sort((a, b) => Math.abs(a.cx - S.player.x) - Math.abs(b.cx - S.player.x));
+    return c[0] || null;
+  }
+  function investigateNearest() {
+    if (S.paused) return;
+    const b = nearestInvestigable();
+    if (b) openInvestigation(b);
+  }
+
+  function openModal(html, cls = '') {
+    S.prevMode = S.mode === 'modal' ? S.prevMode : S.mode;
+    S.mode = 'modal';
+    pointer.down = false;
+    Object.keys(keys).forEach(k => keys[k] = false);
+    overlay.innerHTML = `<div class="modal px-box ${cls}">${html}</div>`;
+    overlay.classList.add('show');
+    return overlay.firstElementChild;
+  }
+  function closeModal() {
+    overlay.classList.remove('show'); overlay.innerHTML = '';
+    S.mode = S.prevMode || 'play';
+  }
+
+  function openInvestigation(b) {
+    const tp = S.topics[b.topic];
+    if (!tp || tp.investigated) { toast('この話題は調査済みです'); return; }
+    const def = tp.def;
+    const claims = shuffle(def.claims);
+    const m = openModal(`
+      <div class="mhead"><i class="ico search"></i>火元調査ミッション　<span style="opacity:.8;font-size:.8em">${esc(def.tag)}</span></div>
+      <div class="inv-grid">
+        <div>
+          <div class="post">
+            <div class="who"><div class="avatar">？</div>${esc(def.user)} <small>${esc(def.handle)}</small></div>
+            <div class="body">${esc(def.post)}</div>
+            <div class="meta"><span>リポスト ${fmt(tp.posts * 0.31)}</span><span>いいね ${fmt(tp.posts * 0.82)}</span><span>投稿数 ${fmt(tp.posts)}</span></div>
+          </div>
+          <div class="claims">
+            ${claims.map((c, i) => `
+              <div class="claim" data-i="${i}">
+                <div class="ct"><span class="mark"></span>${esc(c.text)}</div>
+                <div class="opts">${LABELS.map(l => `<button class="opt" data-v="${l.key}">${l.key}</button>`).join('')}</div>
+                <div class="why">${esc(c.why)}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+        <div class="side-card">
+          <h4>情報の確認</h4>
+          <ul>
+            <li><i class="ico check"></i>一次情報を探す</li>
+            <li><i class="ico check"></i>出典をチェック</li>
+            <li><i class="ico check"></i>文脈を読む</li>
+          </ul>
+          <div class="legend">
+            ${LABELS.map(l => `<div><b>${l.key}</b>${esc(l.desc)}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="result-line" id="invResult">拡散中の話題を調べ、それぞれ「事実・推測・不明」を見分けよう</div>
+      <div class="mbtns"><button class="btn light" id="invCancel">あとで</button><button class="btn orange" id="invJudge" disabled>判定する</button></div>
+    `, 'wide');
+    const sel = {};
+    m.querySelectorAll('.claim').forEach(el => {
+      el.querySelectorAll('.opt').forEach(btn => btn.onclick = () => {
+        if (m.dataset.judged) return;
+        el.querySelectorAll('.opt').forEach(x => x.classList.remove('sel'));
+        btn.classList.add('sel');
+        sel[el.dataset.i] = btn.dataset.v;
+        m.querySelector('#invJudge').disabled = Object.keys(sel).length < claims.length;
+      });
+    });
+    m.querySelector('#invCancel').onclick = closeModal;
+    m.querySelector('#invJudge').onclick = () => {
+      if (m.dataset.judged) { closeModal(); return; }
+      m.dataset.judged = '1';
+      let right = 0;
+      m.querySelectorAll('.claim').forEach(el => {
+        const c = claims[el.dataset.i];
+        const ok = sel[el.dataset.i] === c.ans;
+        if (ok) right++;
+        el.classList.add('judged');
+        el.querySelectorAll('.opt').forEach(btn => {
+          if (btn.dataset.v === c.ans) btn.classList.add('right');
+          else if (btn.classList.contains('sel')) btn.classList.add('wrong');
+        });
+        el.querySelector('.mark').innerHTML = `<i class="ico ${ok ? 'check' : 'cross'}"></i>`;
+      });
+      tp.investigated = true;
+      S.stats.invCount++; S.stats.claimTotal += claims.length; S.stats.claimRight += right;
+      const r = right / claims.length;
+      const bs = burningOf(tp.def.id);
+      let msg;
+      if (r === 1) {
+        tp.debunked = true;
+        bs.forEach(x => { x.fire = Math.max(1, x.fire - 55); });
+        addScore(150);
+        msg = '火元特定！ デマと判明し、炎が一気に弱まった！ +150';
+        announce(`${def.tag} はデマと判明！ 炎が弱まりました`, 'search');
+      } else if (r > 0) {
+        bs.forEach(x => { x.fire = Math.max(1, x.fire - 55 * r); });
+        addScore(Math.round(150 * r));
+        msg = `${right}/${claims.length} 正解！ 炎が少し弱まった`;
+        announce(`調査で ${def.tag} の炎が少し弱まりました`, 'search');
+      } else {
+        bs.forEach(x => { x.fire = Math.min(100, x.fire + 10); });
+        msg = '見分けられず… 炎が勢いを増した！ 解説を読んでみよう';
+        announce(`${def.tag} の炎が勢いを増しています！`);
+      }
+      m.querySelector('#invResult').textContent = msg;
+      m.querySelector('#invCancel').style.display = 'none';
+      m.querySelector('#invJudge').textContent = '現場に戻る';
+    };
+  }
+
+  // ---------- 防火訓練クイズ ----------
+  let quizPool = [];
+  function openQuiz(count, done) {
+    let n = 0;
+    const next = () => {
+      if (n >= count) { closeModal(); done(); return; }
+      n++;
+      if (!quizPool.length) quizPool = shuffle(QUIZZES);
+      const qz = quizPool.pop();
+      const order = shuffle([0, 1, 2]);
+      const m = openModal(`
+        <div class="mhead"><i class="ico book"></i>防火訓練クイズ　<span style="opacity:.8;font-size:.8em">${n} / ${count}</span></div>
+        <div class="quiz-grid">
+          <div class="quiz-card">
+            <div class="q">${esc(qz.q)}</div>
+            ${order.map((oi, k) => `<button class="qopt" data-oi="${oi}"><span class="dot"></span><b>${'ABC'[k]}</b> ${esc(qz.options[oi])}</button>`).join('')}
+          </div>
+          <div class="qfeed" id="qfeed"></div>
+        </div>
+        <div class="three">
+          <div><i class="ico search"></i> 調べる力<small>出典の確認</small></div>
+          <div><i class="ico shield"></i> 見分ける力<small>事実・推測・不明の区別</small></div>
+          <div><i class="ico bulb"></i> 考える力<small>多様な意見の理解</small></div>
+        </div>
+        <div class="mbtns"><button class="btn orange" id="qNext" style="visibility:hidden">${n >= count ? '次へ進む' : '次の問題'}</button></div>
+      `);
+      m.querySelectorAll('.qopt').forEach(btn => btn.onclick = () => {
+        if (m.dataset.done) return;
+        m.dataset.done = '1';
+        const ok = Number(btn.dataset.oi) === qz.answer;
+        S.stats.quizTotal++;
+        if (ok) { S.stats.quizRight++; addScore(100); S.walls = Math.min(3, S.walls + 1); }
+        m.querySelectorAll('.qopt').forEach(b2 => { if (Number(b2.dataset.oi) === qz.answer) b2.classList.add('right'); });
+        if (!ok) btn.classList.add('wrong');
+        const fb = m.querySelector('#qfeed');
+        fb.innerHTML = `<span class="badge ${ok ? 'ok' : 'ng'}">${ok ? '正解！' : 'ざんねん…'}</span>
+          <div class="box"><b>${esc(qz.head)}</b><span>${esc(qz.why)}</span>${ok ? '<div style="margin-top:.4em;font-weight:900;color:#23a050">防火壁 +1</div>' : ''}</div>`;
+        fb.classList.add('show');
+        m.querySelector('#qNext').style.visibility = 'visible';
+      });
+      m.querySelector('#qNext').onclick = next;
+    };
+    S.mode = 'play';
+    next();
+    S.prevMode = 'play';
+  }
+
+  // ---------- 遊び方 ----------
+  function showHowTo(fromGame) {
+    const m = openModal(`
+      <div class="mhead"><i class="ico pad"></i>ゲームの遊び方</div>
+      <div class="how-row"><i class="ico drop big"></i><div><h3>消火アクション</h3><p>消防士を操作して、デマの火を鎮火！ 仲間の消防士と協力して、大規模な延焼にも対応しよう。</p></div></div>
+      <div class="how-row"><i class="ico search big"></i><div><h3>火元調査ミッション</h3><p>燃えている建物の看板をタップ（またはEキー）。拡散中の話題を調べ、「事実・推測・不明」を見分けると、炎が一気に弱まる！</p></div></div>
+      <div class="how-row"><i class="ico shield big"></i><div><h3>延焼防止・予防活動</h3><p>「！」のくすぶりに近づいてパトロールすれば、炎上を未然に防げる。防火壁（Fキー）で、となりへの延焼をブロック！</p></div></div>
+      <div class="how-row"><i class="ico book big"></i><div><h3>防火訓練クイズ</h3><p>出動のあいだにクイズで特訓。正解すると防火壁がもらえるよ。</p></div></div>
+      <div class="keys">
+        <kbd>←→↑↓</kbd>/<kbd>WASD</kbd> 移動　<kbd>マウス長押し</kbd> ねらって放水　<kbd>Space</kbd> 近くの火に放水<br>
+        <kbd>E</kbd> 火元調査　<kbd>F</kbd> 防火壁　<kbd>P</kbd> 一時停止　｜ スマホ：建物を長押しで放水、道路をタップで移動
+      </div>
+      <div class="mbtns"><button class="btn light" id="howClose">とじる</button>${fromGame ? '' : '<button class="btn orange" id="howStart">出動する！</button>'}</div>
+    `);
+    m.querySelector('#howClose').onclick = closeModal;
+    const st = m.querySelector('#howStart');
+    if (st) st.onclick = () => { closeModal(); startGame(); };
+  }
+
+  // ---------- 結果 ----------
+  function endGame(cleared) {
+    if (S.mode === 'result') return;
+    const st = S.stats;
+    const claimAcc = st.claimTotal ? Math.round(st.claimRight / st.claimTotal * 100) : 0;
+    const quizAcc = st.quizTotal ? Math.round(st.quizRight / st.quizTotal * 100) : 0;
+    const stars = v => '★'.repeat(v) + '☆'.repeat(3 - v);
+    const research = st.invCount >= 4 ? 3 : st.invCount >= 2 ? 2 : st.invCount >= 1 ? 1 : 0;
+    const discern = claimAcc >= 90 ? 3 : claimAcc >= 60 ? 2 : claimAcc > 0 ? 1 : 0;
+    const think = quizAcc >= 90 ? 3 : quizAcc >= 60 ? 2 : quizAcc > 0 ? 1 : 0;
+    const m = openModal(`
+      <div class="res-title ${cleared ? 'ok' : 'ng'}">${cleared ? '🎉 炎上市を守りきった！' : '街の信頼が尽きてしまった…'}</div>
+      <div class="res-sub">SCORE <b style="font-size:1.4em;color:#e8433a">${fmt(S.score)}</b></div>
+      <div class="res-grid">
+        <div class="res-card">
+          <h4><i class="ico building"></i>街の統計（炎上市 消防本部）</h4>
+          <div class="stat-table">
+            <div>今回の出動数<b>${st.dispatch}<small>件</small></b></div>
+            <div>鎮火数<b>${st.extinguished}<small>件</small></b></div>
+            <div>未然に防いだ<b>${st.prevented}<small>件</small></b></div>
+            <div>延焼ブロック<b>${st.blocked}<small>回</small></b></div>
+            <div>調査の正答率<b>${claimAcc}<small>%</small></b></div>
+            <div>クイズ正答率<b>${quizAcc}<small>%</small></b></div>
+          </div>
+          <h4 style="margin-top:.7em">プレイで身につく 3つの力</h4>
+          <div class="three" style="margin-top:0">
+            <div>調べる力<small>出典の確認</small><span class="stars">${stars(research)}</span></div>
+            <div>見分ける力<small>事実・推測・不明</small><span class="stars">${stars(discern)}</span></div>
+            <div>考える力<small>多様な意見の理解</small><span class="stars">${stars(think)}</span></div>
+          </div>
+        </div>
+        <div class="res-card">
+          <h4><i class="ico check"></i>プレイ後のアクション提案</h4>
+          <ul class="checks">
+            <li><i class="ico check"></i>気になる情報はまず出典を確認</li>
+            <li><i class="ico check"></i>不確かな情報は拡散を控える</li>
+            <li><i class="ico check"></i>公式・信頼できる情報源をチェック</li>
+            <li><i class="ico check"></i>異なる意見も一度読んでみる</li>
+          </ul>
+          <h4 style="margin-top:.5em;background:#e8433a"><i class="ico target"></i>目指す効果</h4>
+          <ul class="checks">
+            <li><i class="ico check"></i>デマの拡散を減らす</li>
+            <li><i class="ico check"></i>冷静に判断する習慣を育てる</li>
+            <li><i class="ico check"></i>健全なネットの空気をつくる</li>
+          </ul>
+        </div>
+      </div>
+      <div class="mbtns"><button class="btn light" id="resTitle">タイトルへ</button><button class="btn orange" id="resRetry">もう一度出動！</button></div>
+    `, 'wide');
+    S.mode = 'result'; S.prevMode = 'result';
+    m.querySelector('#resRetry').onclick = () => { closeModal(); startGame(); };
+    m.querySelector('#resTitle').onclick = () => { closeModal(); toTitle(); };
+  }
+
+  function toTitle() {
+    S = freshState('title');
+    hud.classList.remove('playing');
+    announce('話題が急増！　消防隊が出動しました！');
+  }
+
+  // ---------- ループ ----------
+  const DEBUG = { speed: 1 };
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    for (let k = 0; k < (DEBUG.speed || 1); k++) update(dt);
+    render();
+    updateHUD(dt);
+    requestAnimationFrame(frame);
+  }
+  toTitle();
+  // テスト・デバッグ用
+  window.__enjo = { get S() { return S; }, startGame, B, DEBUG, keys };
+  requestAnimationFrame(frame);
+})();
+
+</script>
+</body>
+</html>
